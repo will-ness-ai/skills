@@ -1,0 +1,5 @@
+interface:
+  display_name: "Sandcastle"
+  short_description: "Loop tickets through sandboxed agents AFK into a PR"
+policy:
+  allow_implicit_invocation: false
