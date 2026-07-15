@@ -47,7 +47,7 @@ Done when: a PR URL exists, its body links every landed ticket and names the ski
 
 ## Mechanics you'll rely on
 
-- **`` !`cmd` `` in a prompt file** runs `cmd` inside the sandbox at prep time and inlines its stdout — this is how the ticket list reaches the agent.
+- **Bang-substitution** — a prompt file line consisting of a bang character followed by a backtick-quoted command runs that command inside the sandbox at prep time and inlines its stdout — this is how the ticket list reaches the agent. (Written in words here on purpose: a literal example of the syntax would be executed by the slash-command preprocessor at load time.)
 - **Prompt variables**: `{{SOURCE_BRANCH}}` = the branch the agent works on; `{{TARGET_BRANCH}}` = the host's active branch when the iteration started; `{{KEY}}` = filled from the run's `promptArgs`.
 - **Termination**: the in-sandbox agent ends its turn with `<promise>COMPLETE</promise>`; the orchestrator stops the whole loop once an iteration commits nothing (backlog dry). So the implement prompt must tell the agent to skip blocked tickets and pick the next workable one — otherwise one blocked ticket at the top halts the batch.
 - **Config knobs** sit at the top of the orchestrator: `MAX_ITERATIONS`, the `claudeCode("<model>")` model, and the `docker({ imageName, mounts })` provider with its `onSandboxReady` install hook.
