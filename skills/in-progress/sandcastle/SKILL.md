@@ -23,7 +23,7 @@ The loop runs from `.sandcastle/`.
 
 Into the implement prompt put: the backlog fetch from step 1, this repo's build/verify commands (the ones that gate a commit), and the commit + mark-done convention. Keep the review phase.
 
-Adaptations worth making (hard-won in homebase): mount `~/.claude/skills` read-only so the in-sandbox agent can run `/implement`, `/tdd`, and `/code-review`; pin the docker `imageName` (the default derives from the directory name and breaks in a worktree); persist the package-manager store across runs when installs are slow.
+Adaptations worth making (hard-won in homebase): mount `~/.claude/skills` read-only so the in-sandbox agent can run `/implement`, `/tdd`, and `/code-review`; pin the docker `imageName` (the default derives from the directory name and breaks in a worktree); persist the package-manager store across runs when installs are slow — and add that store to `.sandcastle/.gitignore`; init scaffolds it with only `logs/`/`worktrees/`, so any runtime dir you add (a persisted store, or `patches/` on newer Sandcastle) stays tracked and bloats git until you list it.
 
 Done when: `.sandcastle/` has an orchestrator, Dockerfile, implement + review prompts, and a populated `.env`; and the implement prompt's fetch prints the step-1 backlog.
 
