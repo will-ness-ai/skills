@@ -30,14 +30,14 @@ The **map** is a single `wayfinder:map` issue whose tickets are its child issues
 
 Beyond the live tickets lies the **fog of war** — decisions you can tell are coming but can't yet pin down. The test for whether something is a ticket or still fog is whether you can *state the question precisely now*, not whether you can answer it. Resolving a ticket clears the fog ahead of it, **graduating** whatever's now specifiable into fresh tickets. The **frontier** is the open, unblocked, unclaimed tickets — the edge of the known — and it's what the tracker's native blocking renders visually, so you see what's takeable without opening the map. Fog only gathers *toward* the **destination**; work past it is ruled **out of scope**, closed, never graduating.
 
-Every ticket is **HITL** (human in the loop — grilling, prototype) or **AFK** (agent alone — research); a HITL ticket only resolves through a live exchange, so the agent never answers its own questions. Research stays a real ticket — a shared blocker downstream decisions hang on — but because it's AFK, a session doesn't stop and read: it fires a `/research` **subagent** to burn the ticket down in parallel, keeping the frontier fast, and captures the findings on a throwaway `research/<name>` branch.
+Every ticket is **HITL** (human in the loop) or **AFK** (agent alone) — a call made per ticket, on whether the question genuinely needs you, not something its type decides. A HITL ticket only resolves through a live exchange, so the agent never answers its own questions. An AFK one it drives alone: a research ticket is still its own session, but the agent invokes `research`, the reading runs in a background agent, and the findings come back as a cited file linked from the ticket.
 
 ## It's working if
 
 - Naming the **destination** is the first act — before any ticket exists — because it fixes the scope every ticket is measured against.
 - One map is one `wayfinder:map` issue; tickets are its child issues, referred to by **name**, never a bare `#42`.
 - Before working a ticket it **zooms out** for you: the ticket's type in bold, then bullets on what the work is and where it sits on the map.
-- A session resolves **at most one ticket** (research tickets excepted), records the answer as a resolution comment, closes the ticket, and appends a one-line pointer to *Decisions so far*.
+- A session resolves **exactly one ticket**, records the answer as a resolution comment, closes the ticket, and appends a one-line pointer to *Decisions so far*.
 - If the opening grill surfaces **no fog**, it stops and tells you the journey is small enough to skip the map.
 
 ## Where it fits

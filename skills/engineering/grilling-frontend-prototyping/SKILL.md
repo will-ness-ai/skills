@@ -3,7 +3,7 @@ name: grilling-frontend-prototyping
 description: Converge on a frontend look through rounds of prototypes and grilling verdicts. Use when the user wants to iterate on UI/visual taste against concrete variants, or a wayfinder prototype ticket names this skill.
 ---
 
-Run a `/grilling` session, using the `/prototype` skill — each question is asked with prototypes, not words:
+Invoke the Skill tool for `grilling` and for `prototype` — each question is asked with prototypes, not words:
 
 - Each round, build 5 radically different prototypes of the current design
   question into one live mocked app: one standalone HTML file (Artifact
