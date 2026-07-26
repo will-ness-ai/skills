@@ -17,6 +17,8 @@ Two choices, trading different costs:
 
 Pick model-invocation only when the agent must reach the skill on its own, or another skill must. If it only ever fires by hand, make it user-invoked and pay no context load.
 
+When a skill reaches another skill, name the call: _Invoke the Skill tool for `grilling`_ — the phrasing that fires it most reliably.
+
 When user-invoked skills multiply past what you can remember, that piled-up cognitive load is cured by a **router skill**: one user-invoked skill that names the others and when to reach for each.
 
 ## Writing the description
