@@ -26,3 +26,16 @@ The only robust ways to give Codex a single promoted-only path are (a) **restruc
 
 - Every promoted skill has an entry in `.claude-plugin/plugin.json`'s `skills` array (this already stood as a `CLAUDE.md` rule; it now also gates the plugin's contents).
 - `.claude-plugin/plugin.json`'s `version` tracks `package.json`'s version — bump both together on release. Claude uses the plugin `version` to decide when installed users see an update.
+
+## Update, 2026-08-05
+
+`mattpocock-skills` was accepted into **Claude Code's official marketplace** — configured name `claude-plugins-official`, source repo `anthropics/claude-plugins-official` — which every Claude Code install has by default. `claude plugins install mattpocock-skills` is now the documented route, and the `marketplace add` → `install` path above is superseded. The install wording lives in [.agents/install-block.md](../install-block.md).
+
+The official listing points at this repo's git URL and reads `.claude-plugin/plugin.json` directly, so it does not depend on `.claude-plugin/marketplace.json`. That file is retained only as a fallback for installing the repo directly (an unreleased commit, or a fork).
+
+Verified 2026-08-05, on Claude Code 2.1.222, against the live listing:
+
+- `claude plugins install mattpocock-skills` resolves with no marketplace added first, and reports `mattpocock-skills@claude-plugins-official`.
+- `claude plugin details mattpocock-skills` then reports version 1.2.0 and loads the promoted skills.
+- The listing's `source` is `{"source": "url", "url": "https://github.com/mattpocock/skills.git", "sha": …}` — the **sha is pinned**, so a release reaches installed users when that pin moves, not the moment we tag. At the time of writing the pin sits two commits behind `main`, which is why it lists 22 skills rather than the 24 in `plugin.json`.
+- The in-session `/plugin install mattpocock-skills` was **not** exercised — `/plugin` is unavailable in headless (`claude -p`) sessions. It runs the same resolver as the CLI, and the documented example form is `/plugin install <name>@claude-plugins-official`.
