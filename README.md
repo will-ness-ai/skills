@@ -5,7 +5,7 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 ## Skills
 
 - **[flashlight](./skills/flashlight/SKILL.md)** — Shine a light into a wayfinder map's fog: work one direction now, out of frontier order, or redraw the map itself. Needs an existing wayfinder map. External dependencies: `/grilling`, `/domain-modeling`, `/research`, `/prototype`.
-- **[grilling-frontend-prototyping](./skills/grilling-frontend-prototyping/SKILL.md)** — Converge on a frontend look through rounds of prototypes and grilling verdicts. External dependencies: `/grilling`, `/prototype`.
+- **[grill-design](./skills/grill-design/SKILL.md)** — Converge on a frontend look through rounds of prototypes and grilling verdicts. External dependencies: `/grilling`, `/prototype`. _(previously `grilling-frontend-prototyping`)_
 - **[sandcastle](./skills/sandcastle/SKILL.md)** — Run a sandboxed implement→review loop over a batch of work in its own worktree, ended by an agent-authored PR. External dependencies, mounted at run time: `/implement`, `/tdd`, `/code-review`.
 
 An **external dependency** is a skill these call but this repo does not contain. Install it separately.

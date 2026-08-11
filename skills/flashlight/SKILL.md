@@ -35,7 +35,7 @@ Infer the **type** from the request:
 | --- | --- | --- |
 | **Grilling** (HITL) | a decision to settle by conversation — the default | `/grilling` and `/domain-modeling` |
 | **Research** (AFK) | a fact from outside this working directory | a `/research` subagent |
-| **Prototype** (HITL) | "how should it look, how should it behave", answered by a cheap concrete artifact | `/prototype`; `/grilling-frontend-prototyping` for an unsettled frontend look |
+| **Prototype** (HITL) | "how should it look, how should it behave", answered by a cheap concrete artifact | `/prototype`; `/grill-design` for an unsettled frontend look |
 | **Task** (HITL or AFK) | manual work that unblocks a decision | the agent alone where it can; otherwise a precise checklist for the human |
 
 On a **HITL** type the human answers their own questions — this session asks and records. An **AFK** type runs alone.
