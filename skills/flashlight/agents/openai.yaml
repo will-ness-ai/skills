@@ -1,0 +1,5 @@
+interface:
+  display_name: "Flashlight"
+  short_description: "Work one direction of a wayfinder map, out of order"
+policy:
+  allow_implicit_invocation: false
