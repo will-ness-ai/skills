@@ -1,30 +1,20 @@
-# Matt Pocock Skills
+# Skills
 
-A collection of agent skills (slash commands and behaviors) loaded by Claude Code. Skills are organized into buckets and consumed by per-repo configuration emitted by `/setup-matt-pocock-skills`.
+My personal agent skills — slash commands and behaviours loaded by Claude Code and other Agent-Skills harnesses.
 
 ## Language
 
-**Issue tracker**:
-The tool that hosts a repo's issues — GitHub Issues, Linear, a local `.scratch/` markdown convention, or similar. Skills like `to-tickets`, `to-spec`, and `triage` read from and write to it.
-_Avoid_: backlog manager, backlog backend, issue host
+**Skill**:
+A folder under `skills/` that holds a `SKILL.md`. The harness loads it as a slash command or an automatic behaviour.
 
-**Issue**:
-A single tracked unit of work inside an **Issue tracker** — a bug, task, spec, or slice produced by `to-tickets`.
-_Avoid_: ticket (use only when quoting external systems that call them tickets, or for a **Decision ticket** — see below)
+**Harness**:
+The agent tool that loads a skill — Claude Code (`~/.claude/skills`) or a Codex-style Agent-Skills harness (`~/.agents/skills`).
 
-**Decision ticket**:
-A `wayfinder` unit — a child **Issue** of a `wayfinder:map` holding a *question* whose resolution is a decision, not a slice of a build to execute. The **decision** qualifier is what keeps it distinct from an implementation ticket; `wayfinder` introduces the term, then uses "ticket".
+**User-invoked skill**:
+A skill that only the human starts, by name. It sets `disable-model-invocation: true`.
 
-**Triage role**:
-A canonical state-machine label applied to an **Issue** during triage (e.g. `needs-triage`, `ready-for-afk`). Each role maps to a real label string in the **Issue tracker** via `docs/agents/triage-labels.md`.
+**Model-invoked skill**:
+A skill that the agent can also reach on its own.
 
-## Relationships
-
-- An **Issue tracker** holds many **Issues**
-- An **Issue** carries one **Triage role** at a time
-- A **Decision ticket** is an **Issue** (a child of a `wayfinder:map`)
-
-## Flagged ambiguities
-
-- "backlog" was previously used to mean both the *tool* hosting issues and the *body of work* inside it — resolved: the tool is the **Issue tracker**; "backlog" is no longer used as a domain term.
-- "backlog backend" / "backlog manager" — resolved: collapsed into **Issue tracker**.
+**External dependency**:
+A skill that a `SKILL.md` calls but this repo does not contain — for example `/grilling`. Install it separately.
