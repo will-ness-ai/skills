@@ -1,0 +1,5 @@
+interface:
+  display_name: "cmux"
+  short_description: "Drive the local cmux app — workspaces, panes, surfaces, agents"
+policy:
+  allow_implicit_invocation: false
