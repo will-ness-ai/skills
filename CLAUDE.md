@@ -6,4 +6,4 @@ Every `SKILL.md` is user-invoked or model-invoked. A user-invoked skill sets `di
 
 To link every skill into the local harness skill directories (`~/.claude/skills`, `~/.agents/skills`), run `scripts/link-skills.sh`. Each entry is a symlink into this repo, so a `git pull` keeps the installed skills current. Run the script again after you add, remove, or rename a skill.
 
-When you add, rename, or remove a skill, update the `README.md` skill index to match.
+When you add, rename, or remove a skill, update the `README.md` skill index to match, then run `scripts/check-skills.sh` until it passes. It enforces every rule above, and CI runs it on each push and pull request.
