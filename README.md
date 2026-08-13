@@ -21,6 +21,14 @@ scripts/link-skills.sh
 
 Each entry is a symlink into this repo, so a `git pull` keeps the installed skills current. Run the script again after you add, remove, or rename a skill.
 
+## Check
+
+```bash
+scripts/check-skills.sh
+```
+
+Verifies that every skill folder holds a `SKILL.md` whose `name` matches the folder, that it carries an `agents/openai.yaml`, that both files agree on whether the skill is user-invoked or model-invoked, and that the index above lists exactly the skills on disk. CI runs it on each push and pull request.
+
 ## Origin
 
 Originally forked from [mattpocock/skills](https://github.com/mattpocock/skills). Matt's skills are no longer kept here; install his set separately if you want them.

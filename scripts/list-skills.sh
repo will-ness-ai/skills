@@ -4,4 +4,6 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 
 cd "$REPO"
-find . -name SKILL.md -not -path '*/node_modules/*' | sed 's|^\./||' | sort
+# engineering/ holds only redirect stubs for moved skills, not real skills.
+find . -name SKILL.md -not -path '*/node_modules/*' -not -path '*/engineering/*' |
+  sed 's|^\./||' | sort
