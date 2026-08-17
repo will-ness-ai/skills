@@ -1,0 +1,5 @@
+interface:
+  display_name: "Find Standards"
+  short_description: "Find standards we could adopt, and the industry's best practices"
+policy:
+  allow_implicit_invocation: false
