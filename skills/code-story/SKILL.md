@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 A **code story** cuts a change into **chapters** and walks the reader through one at a time. A chapter answers one question, and its title *is* that question. It pulls hunks from whichever files hold that mechanism, so one chapter often spans several.
 
-The story turns a change too large to hold in your head into one the reader could explain back. Write it for someone who joined this repo **today** — fluent in the language, new to the codebase — so every term the codebase invented gets explained the first time it appears.
+A code story explains **why** the code changed the way it did. Write it for a day-one contributor — someone who knows nothing yet about this domain, this codebase, or its architecture.
 
 ## Build it
 
