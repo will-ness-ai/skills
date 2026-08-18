@@ -1,0 +1,241 @@
+<!--
+  CODE STORY TEMPLATE — copy this file, then write <article> blocks into <main>.
+
+  Everything else computes itself from those articles:
+    · the chapter rail          · "Chapter N of M"          · Back / Next + arrow keys
+    · note numbering            · the note <-> code link     · mermaid (Artifact-native or CDN)
+
+  Write: <title>, the two header lines, and one <article> per chapter.
+  See example.html for a finished story.
+-->
+<title>CHAPTER-STORY TITLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg:#FFFDFC; --panel:#FFFFFF; --ink:#161318; --dim:#6B6470; --rule:#E6E1E7;
+  --acc:#4A2545; --acc-s:#F4EEF3; --acc-m:#E4D3E1;
+  --add:#1C6446; --add-b:#EAF3EE; --del:#93262E; --del-b:#F9EBEC;
+  --mk:#F0DCEE; --warn:#7A4A12; --warn-b:#FBF3E5;
+  --f-d:"Fraunces",Georgia,serif; --f-b:"Source Serif 4",Georgia,serif; --f-m:"IBM Plex Mono",ui-monospace,monospace;
+  --m:64ch;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14111A; --panel:#1A1620; --ink:#EDE7EF; --dim:#9A91A3; --rule:#2E2836;
+  --acc:#D9A7CE; --acc-s:#251E2B; --acc-m:#3E3247;
+  --add:#5FCF9E; --add-b:#12271E; --del:#F0888E; --del-b:#2B1519;
+  --mk:#3D2A3B; --warn:#E5B575; --warn-b:#2B2113;
+}}
+:root[data-theme="dark"]{
+  --bg:#14111A; --panel:#1A1620; --ink:#EDE7EF; --dim:#9A91A3; --rule:#2E2836;
+  --acc:#D9A7CE; --acc-s:#251E2B; --acc-m:#3E3247;
+  --add:#5FCF9E; --add-b:#12271E; --del:#F0888E; --del-b:#2B1519;
+  --mk:#3D2A3B; --warn:#E5B575; --warn-b:#2B2113;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-b);line-height:1.65;font-size:17px}
+
+#app{max-width:1180px;margin:0 auto;padding:0 clamp(1rem,3vw,2rem);min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;align-items:baseline;gap:1.25rem;flex-wrap:wrap;padding:1.4rem 0 1.1rem;border-bottom:1px solid var(--rule)}
+.top h1{font-family:var(--f-d);font-weight:900;font-size:1.15rem;margin:0;letter-spacing:-.015em}
+.top .src{font-family:var(--f-m);font-size:.76rem;color:var(--dim)}
+.top .ct{margin-left:auto;font-family:var(--f-m);font-size:.76rem;color:var(--dim);font-variant-numeric:tabular-nums}
+.wrap{display:grid;grid-template-columns:236px minmax(0,1fr);gap:2.5rem;flex:1;padding:2rem 0}
+@media(max-width:920px){.wrap{grid-template-columns:1fr;gap:1rem}.rail{display:none}}
+.rail{align-self:start;position:sticky;top:1.25rem;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--rule);padding-right:1rem;counter-reset:r}
+.rail h4{font-family:var(--f-m);font-size:.63rem;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);margin:0 0 .7rem}
+.rail button{counter-increment:r;text-align:left;background:none;border:0;color:var(--dim);font:inherit;font-size:.83rem;line-height:1.35;padding:.45rem .5rem .45rem 0;cursor:pointer;display:grid;grid-template-columns:1.6rem 1fr;gap:.3rem}
+.rail button::before{content:counter(r);font-family:var(--f-m);font-size:.7rem;opacity:.6}
+.rail button:hover{color:var(--ink)}
+.rail button.on{color:var(--acc);font-weight:600}
+
+article{display:none}article.on{display:block}
+.hd{border-bottom:3px solid var(--ink);padding-bottom:1.1rem;margin-bottom:2rem}
+.eb{font-family:var(--f-m);font-size:.68rem;text-transform:uppercase;letter-spacing:.15em;color:var(--dim);display:block;margin-bottom:.7rem}
+h2{font-family:var(--f-d);font-weight:900;font-size:clamp(1.9rem,4.2vw,3rem);line-height:1.04;letter-spacing:-.025em;margin:0;text-wrap:balance}
+.q{color:var(--dim);max-width:var(--m);margin:1rem 0 0;font-size:1.05rem}
+h3{font-family:var(--f-m);font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--dim);font-weight:600;margin:2.4rem 0 .9rem}
+.pr{max-width:var(--m)}.pr p{margin:0 0 1.1rem}
+code{font-family:var(--f-m);font-size:.86em;background:var(--acc-s);padding:.1em .34em;border-radius:3px}
+
+.dx{margin:0 0 .9rem;border:1px solid var(--rule);background:var(--panel)}
+.dh{display:flex;gap:.6rem;align-items:baseline;padding:.5rem .85rem;border-bottom:1px solid var(--rule);font-family:var(--f-m);font-size:.72rem;flex-wrap:wrap}
+.dh b{font-weight:600}.dh s{text-decoration:none;color:var(--dim)}
+.diff{margin:0;overflow-x:auto;font-family:var(--f-m);font-size:.795rem;line-height:1.85;counter-reset:l}
+.diff code{display:block;min-width:max-content;background:none;padding:0;border-radius:0;font-size:1em}
+.diff i{display:block;font-style:normal;white-space:pre;padding:0 .9rem 0 0;transition:background .12s}
+.diff i::before{content:counter(l);counter-increment:l;display:inline-block;width:3.4em;padding-right:1.1em;text-align:right;color:var(--dim);opacity:.55;user-select:none;font-variant-numeric:tabular-nums}
+.diff .a{background:var(--add-b);color:var(--add)}
+.diff .d{background:var(--del-b);color:var(--del)}
+.diff .c{color:var(--dim)}
+.diff .e{color:var(--dim);opacity:.7;padding:.15rem 0;background:var(--acc-s)}
+.diff .e::before{content:"⋯ ⋯ ⋯";counter-increment:none;width:auto;padding-left:1.1em;text-align:left;letter-spacing:.3em;opacity:.8}
+.diff mark{background:var(--mk);color:inherit;padding:.06em .22em;border-radius:2px;font-weight:600;transition:background .12s,box-shadow .12s}
+.diff [data-n]{cursor:pointer}
+.diff [data-n]::after{content:attr(data-n);display:inline-block;margin-left:1.4em;vertical-align:baseline;
+  width:1.35rem;height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
+  background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
+
+.nt{max-width:var(--m);padding-left:0;margin:0 0 1.9rem;list-style:none}
+.nt li{position:relative;margin-bottom:.35rem;padding:.4rem .6rem .4rem 2.5rem;border-left:2px solid transparent;cursor:pointer;transition:background .12s}
+.nt li::before{content:attr(data-i);position:absolute;left:.5rem;top:.5rem;
+  width:1.35rem;height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
+  background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
+/* hover either side: the marked token fills in, the note tints */
+.diff i.lit mark{background:var(--acc);color:var(--panel);box-shadow:0 0 0 3px var(--acc-m)}
+.nt li.lit{background:var(--acc-s)}
+.lit::after,.nt li.lit::before{background:var(--acc);color:var(--panel)}
+
+aside{max-width:var(--m);margin:1.8rem 0;padding:0 0 0 1.4rem;border-left:4px solid var(--acc)}
+aside p{margin:0;font-family:var(--f-d);font-size:1.12rem;line-height:1.45;font-weight:600;letter-spacing:-.01em}
+aside::before{display:block;font-family:var(--f-m);font-size:.65rem;text-transform:uppercase;letter-spacing:.16em;color:var(--acc);margin-bottom:.5rem;font-weight:600}
+.ki::before{content:"Key insight"}
+.wo{border-left-color:var(--warn)}
+.wo::before{content:"Watch out";color:var(--warn)}
+
+figure{margin:0 0 1.6rem;border:1px solid var(--rule);background:var(--panel)}
+figure .mermaid{margin:0;padding:1.4rem;overflow-x:auto;text-align:center}
+figcaption{padding:.7rem .95rem;border-top:1px solid var(--rule);font-size:.86rem;color:var(--dim)}
+
+.cast{max-width:var(--m);font-size:.93rem;padding-left:1.2rem}
+.cast li{margin-bottom:.55rem;color:var(--dim)}
+.cast code{color:var(--ink)}
+
+.nav{display:flex;gap:.8rem;align-items:center;padding:1.2rem 0 2.5rem;border-top:1px solid var(--rule)}
+.nav button{font-family:var(--f-b);font-size:.9rem;padding:.55rem 1.2rem;border:1px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+.nav button.p{background:var(--acc);color:var(--panel);border-color:var(--acc);font-weight:600}
+.nav button:disabled{opacity:.35;cursor:not-allowed}
+.nav .h{margin-left:auto;font-family:var(--f-m);font-size:.7rem;color:var(--dim)}
+button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<body>
+<div id="app">
+  <header class="top">
+    <h1>STORY TITLE</h1>
+    <span class="src">owner/repo#123 · +N / −N · N files</span>
+    <span class="ct" id="ct"></span>
+  </header>
+
+  <div class="wrap">
+    <nav class="rail"><h4>Chapters</h4></nav>
+
+    <main>
+
+      <!-- ══ ONE ARTICLE PER CHAPTER. Its <h2> becomes the rail entry. ══ -->
+      <article>
+        <div class="hd">
+          <span class="eb">what this chapter covers, in a few words</span>
+          <h2>The question this chapter answers</h2>
+          <p class="q">One or two sentences saying what the reader will not understand without this chapter.</p>
+        </div>
+
+        <!-- DIAGRAM — only where a picture shows something the code cannot. -->
+        <h3>optional section label</h3>
+        <figure>
+          <pre class="mermaid">flowchart LR
+  A["short label"] --> B["short label"]</pre>
+          <figcaption>What the picture makes visible that the code alone does not.</figcaption>
+        </figure>
+
+        <!-- DIFF BLOCK
+             line classes: a = added   d = removed   c = unchanged   e = elision (⋯)
+             counter-reset:l N  -> N is the line BEFORE the first shown line
+             <i class=e style="counter-set:l N"> -> an elision MUST declare where numbering
+                                   resumes: N is the line before the next shown line
+             data-n=K           -> pairs this line with note K
+             <mark>             -> the one token the note is about
+             Line numbers and the +/- signs are drawn by CSS. Write neither. -->
+        <div class="dx">
+          <div class="dh"><b>path/to/file.ts</b><s>57–59, 83</s></div>
+          <pre class="diff" style="counter-reset:l 56"><code
+><i class=c>unchanged line for context</i
+><i class=a data-n=1>added line with a <mark>token</mark> the note explains</i
+><i class=d>removed line</i
+><i class=e style="counter-set:l 82"></i
+><i class=c>another unchanged line after the gap</i
+></code></pre>
+        </div>
+
+        <!-- NOTES — start=K matches the first data-n above. Numbers are drawn by JS. -->
+        <ol class="nt" start="1">
+          <li>Why that line is the way it is. Pin one specific thing; the reader is looking straight at it.</li>
+        </ol>
+
+        <div class="pr">
+          <p>The prose. Explain the mechanism to a competent developer who has never seen this codebase.</p>
+        </div>
+
+        <!-- CALLOUT — class ki = key insight, wo = watch out. Use them sparingly. -->
+        <aside class="ki"><p>The thing that makes the change click.</p></aside>
+
+        <!-- SUPPORTING CAST — the files that did not earn chapter time, named and dismissed. -->
+        <h3>Everything else in this change</h3>
+        <ul class="cast">
+          <li><code>path/to/file</code> <b>(+N / −N)</b> — what it is, and why it needs no chapter.</li>
+        </ul>
+      </article>
+
+    </main>
+  </div>
+
+  <footer class="nav">
+    <button id="prev">← Back</button>
+    <button class="p" id="next">Next chapter →</button>
+    <span class="h">← / → to move between chapters</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+/* mermaid: an Artifact renders <pre class="mermaid"> natively and blocks the CDN above,
+   so the guard no-ops there. A local file loads the script and renders them itself. */
+if(window.mermaid)mermaid.initialize({startOnLoad:true,
+  theme:matchMedia('(prefers-color-scheme:dark)').matches?'dark':'neutral'});
+
+const arts=[...document.querySelectorAll('main article')];
+const rail=document.querySelector('.rail');
+const ct=document.getElementById('ct');
+const prev=document.getElementById('prev'),next=document.getElementById('next');
+let at=0;
+
+arts.forEach((a,k)=>{
+  const b=document.createElement('button');
+  b.textContent=a.querySelector('h2').textContent;
+  b.onclick=()=>go(k);
+  rail.append(b);
+  /* pair every data-n line with its note */
+  const map={};
+  const add=(n,el)=>{(map[n]=map[n]||[]).push(el)};
+  a.querySelectorAll('.diff [data-n]').forEach(el=>add(el.dataset.n,el));
+  a.querySelectorAll('.nt').forEach(ol=>{
+    const s=+(ol.getAttribute('start')||1);
+    [...ol.children].forEach((li,j)=>{li.dataset.i=s+j;li.tabIndex=0;add(String(s+j),li)});
+  });
+  Object.values(map).forEach(els=>{
+    const on=()=>els.forEach(e=>e.classList.add('lit'));
+    const off=()=>els.forEach(e=>e.classList.remove('lit'));
+    els.forEach(e=>{e.addEventListener('pointerenter',on);e.addEventListener('pointerleave',off);
+      e.addEventListener('focus',on);e.addEventListener('blur',off);});
+  });
+});
+
+function go(k){
+  at=Math.max(0,Math.min(arts.length-1,k));
+  arts.forEach((a,j)=>a.classList.toggle('on',j===at));
+  [...rail.querySelectorAll('button')].forEach((b,j)=>b.classList.toggle('on',j===at));
+  ct.textContent='Chapter '+(at+1)+' of '+arts.length;
+  prev.disabled=at===0; next.disabled=at===arts.length-1;
+  scrollTo({top:0,behavior:'smooth'});
+}
+prev.onclick=()=>go(at-1); next.onclick=()=>go(at+1);
+addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea'))return;
+  if(e.key==='ArrowRight')go(at+1);
+  if(e.key==='ArrowLeft')go(at-1);
+});
+go(0);
+</script>

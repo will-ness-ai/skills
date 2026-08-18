@@ -1,0 +1,5 @@
+interface:
+  display_name: "Code Story"
+  short_description: "Teach how and why a change works, one chapter at a time"
+policy:
+  allow_implicit_invocation: false
