@@ -10,6 +10,8 @@ A **code story** cuts a change into **chapters** and walks the reader through on
 
 A code story explains **why** the code changed the way it did. Write it for a day-one contributor — someone who knows nothing yet about this domain, this codebase, or its architecture.
 
+Tell it around code: each chapter is built from the lines it is about — changed, unchanged, or from a dependency — with a note pinning each claim to a line. Prose sets up the question and diagrams show shape; both are there to make those lines mean something.
+
 ## Build it
 
 1. **Read [`references/example.html`](references/example.html)** — a finished six-chapter story about a real 25-file PR. It is the specification: chapter size, how much diff one chapter shows, the voice of the notes, which changes earn a diagram, and how the files that earn no chapter get named and dismissed in a line each.
