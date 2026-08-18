@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 A **code story** cuts a change into **chapters** and walks the reader through one at a time. A chapter answers one question, and its title *is* that question. It pulls hunks from whichever files hold that mechanism, so one chapter often spans several.
 
+The story turns a change too large to hold in your head into one the reader could explain back. Write it for someone who joined this repo **today** — fluent in the language, new to the codebase — so every term the codebase invented gets explained the first time it appears.
+
 ## Build it
 
 1. **Read [`references/example.html`](references/example.html)** — a finished six-chapter story about a real 25-file PR. It is the specification: chapter size, how much diff one chapter shows, the voice of the notes, which changes earn a diagram, and how the files that earn no chapter get named and dismissed in a line each.

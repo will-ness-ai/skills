@@ -117,17 +117,17 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         <div class="hd">
           <span class="eb">Chapter 1 · where you are, and what broke</span>
           <h2>Why does a finished test file still cost 40–55MB?</h2>
-          <p class="q">Vitest gives every test file a fresh sandbox and throws it away when the file ends. So why does the memory never come back?</p>
+          <p class="q">Vitest gives every test file a fresh sandbox. It should throw the sandbox away when the file ends. But why does the memory stay?</p>
         </div>
 
         <div class="pr">
-          <p>Start with the two words this whole change turns on.</p>
-          <p>A <strong>worker</strong> is a long-lived process. It starts once and runs many test files, one after another. It keeps the expensive things between files: resolved paths, file contents, compiled code.</p>
-          <p>A <strong>sandbox</strong> is what one test file runs inside. Node calls it a <code>vm</code> context. It has its own global variables and its own fake browser (jsdom). Vitest builds a new one for every file. When the file ends, the sandbox should become garbage.</p>
-          <p>Vitest calls this arrangement a <strong>vm pool</strong>. It only pays off if each finished sandbox is actually collected.</p>
-          <p>It was not. On a real 638-file suite, each worker held <strong>40–55MB for every test file it had finished</strong>. It spent about <strong>30% of its CPU collecting garbage</strong>, filled up, and restarted <strong>19 times per run</strong> — throwing away the caches the pool exists to keep. A full run took <strong>487 seconds</strong>.</p>
-          <p>The rule behind all of it is short: <em>if anything outside the sandbox still points at the sandbox, the whole sandbox stays.</em> Six separate things pointed at it. Any one of them was enough on its own. That is why this change is six fixes and not one.</p>
-          <p>After all six, the run takes <strong>235 seconds</strong>.</p>
+          <p>Look at these two words first.</p>
+          <p>A <strong>worker</strong> is a process that lives for a long time. It starts one time and runs many test files in order. It keeps heavy data between files, like resolved paths, file contents, and compiled code.</p>
+          <p>A <strong>sandbox</strong> is where one test file runs. Node calls this a <code>vm</code> context. It has its own global variables and its own fake browser (jsdom). Vitest makes a new sandbox for every file. When the file ends, the sandbox should become garbage.</p>
+          <p>Vitest calls this setup a <strong>vm pool</strong>. This only works well if each finished sandbox is actually collected.</p>
+          <p>That did not happen. In a real suite of 638 files, each worker held <strong>40–55MB for every finished test file</strong>. The worker spent about <strong>30% of its CPU collecting garbage</strong>. It filled up and restarted <strong>19 times per run</strong>. This threw away the caches that the pool is meant to keep. A full run took <strong>487 seconds</strong>.</p>
+          <p>The rule for this bug is simple: <em>if anything outside the sandbox still points at the sandbox, the whole sandbox stays alive.</em> Six different things pointed at it. Any one of those things was enough to keep it alive. This is why this change has six fixes instead of one.</p>
+          <p>After all six fixes, the run takes <strong>235 seconds</strong>.</p>
         </div>
 
         <h3>The six things that pointed at it</h3>
@@ -154,14 +154,14 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
   V8C --&gt;|ch6| GRAPH
   GRAPH --&gt; CTX
   CTX --&gt; DOM</pre>
-          <figcaption>Five arrows start in the long-lived worker and end inside one file's sandbox. The sixth points from the sandbox to itself, and stops the sandbox being emptied. Cut one arrow and the other five still hold the file — which is why no single fix helped.</figcaption>
+          <figcaption>Five arrows start in the long-lived worker and end inside a file's sandbox. The sixth arrow points from the sandbox to itself. This stops the sandbox from being emptied. If you cut one arrow, the other five still hold the file. This is why one fix alone did not work.</figcaption>
         </figure>
 
         <h3>How you prove a leak like this is gone</h3>
         <div class="pr">
-          <p>You cannot eyeball this. So the change ships a test that fails when the leak comes back.</p>
-          <p>Ten test files are added. They are byte-identical on purpose. Each one imports a big array, does a dynamic import, registers a fixture, and writes into the page — one of each kind of state the six causes hold on to.</p>
-          <p>Beside them sits a custom test environment. It lives in the worker, not in any sandbox. Each time Vitest asks it for a new sandbox, it first forces garbage collection, then counts how many earlier sandboxes are still alive.</p>
+          <p>You cannot see this by looking. So, this change includes a test. The test fails if the leak comes back.</p>
+          <p>Ten test files are added. They are all exactly the same. Each file imports a big array, does a dynamic import, registers a fixture, and writes to the page. These actions create the types of state that the six causes hold onto.</p>
+          <p>There is also a custom test environment. It lives in the worker, not in a sandbox. Every time Vitest asks it for a new sandbox, it does two things: it forces garbage collection, then it counts how many old sandboxes are still alive.</p>
         </div>
         <div class="dx">
           <div class="dh"><b>test/e2e/fixtures/leak-probe/leak-probe-env.ts</b><s>9–11, 25, 38</s></div>
@@ -176,12 +176,12 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>Node gives you no way to force garbage collection. So the test turns the flag on, takes the function out of a throwaway sandbox, and turns the flag off again on the next line. The rest of the run is unaffected.</li>
-          <li>The limit is four, not zero — and it has to be. Node holds on to the newest sandbox or two until a later file replaces it. Four catches leaks that <em>grow with every file</em> while ignoring that small constant tail.</li>
-          <li>The count happens at the <em>start of the next file</em>, not when a file ends. That is the only moment when the previous sandbox is truly finished and the next one does not exist yet.</li>
+          <li>Node does not have a way to force garbage collection. To do this, the test turns a flag on, takes a function out of a temporary sandbox, and turns the flag off on the next line. The rest of the run is normal.</li>
+          <li>The limit is four, not zero. It must be four. Node keeps the newest one or two sandboxes until a new file replaces them. Four catches leaks that <em>grow with every file</em>, but it ignores the small constant number at the end.</li>
+          <li>The count happens at the <em>start of the next file</em>, not when a file ends. This is the only time the previous sandbox is truly finished and the next one does not exist yet.</li>
         </ol>
         <div class="pr">
-          <p>Before this change, nine of the ten sandboxes were still alive at the end. The limit is four, so the test fails. Remove any one of the six fixes and it fails again.</p>
+          <p>Before this change, nine of the ten sandboxes were still alive. The limit is four, so the test fails. If you remove any one of the six fixes, the test fails again.</p>
         </div>
       </article>
 
@@ -189,13 +189,13 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         <div class="hd">
           <span class="eb">Chapter 2 · one missing line</span>
           <h2>Who still holds the file's code after the test ends?</h2>
-          <p class="q">The sandbox is discarded when the file ends. So which object outside it is still pointing back in?</p>
+          <p class="q">The sandbox should be deleted when the file ends. But an object outside the sandbox is still pointing to it.</p>
         </div>
 
         <div class="pr">
-          <p>The answer is the least likely object in the system: the thing that makes error messages readable.</p>
-          <p>When a test fails, you want the stack trace to point at your source file, not at the transformed code Vitest actually ran. Vite does this by replacing <code>Error.prepareStackTrace</code> once, for the whole process. To map any frame back to a source, it keeps a list of every file's compiled code that it has ever seen.</p>
-          <p>That list lives in the worker. It is never emptied unless you ask. Vite gives you the way to ask — <code>close()</code> — and Vitest never called it.</p>
+          <p>The cause is an unlikely object. It is the tool that makes error messages easy to read.</p>
+          <p>When a test fails, you want the stack trace to show your original source file. It should not show the transformed code that Vitest ran. Vite does this by replacing <code>Error.prepareStackTrace</code> one time for the whole process. To map errors back to the source, it keeps a list of all compiled code it has seen.</p>
+          <p>That list stays in the worker. The list is never emptied unless you call a function. Vite provides a way to empty it using <code>close()</code>, but Vitest never called it.</p>
         </div>
 
         <div class="dx">
@@ -205,7 +205,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>This is the list. It is a plain <code>Set</code> at the top of a module, so it lives as long as the worker. Every file's compiled code goes in. Nothing comes out on its own.</li>
+          <li>This is the list. It is a plain <code>Set</code> at the top of a module. Because of this, it stays alive as long as the worker lives. Every file's compiled code goes into the list. Nothing is removed automatically.</li>
         </ol>
 
         <div class="dx">
@@ -221,7 +221,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="2">
-          <li>One line, and it is the whole fix for this cause. Two details earn its place here: it is inside <code>finally</code>, so it still runs when a test file throws; and it comes after teardown, so nothing will need a stack trace from this file again.</li>
+          <li>Adding one line fixes this cause. There are two important details: the line is inside a <code>finally</code> block, so it runs even if a test file fails; and it runs after teardown, so no more stack traces will be needed for that file.</li>
         </ol>
       </article>
 
@@ -229,13 +229,13 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         <div class="hd">
           <span class="eb">Chapter 3 · a flag, not a value</span>
           <h2>How can one property flag keep a whole sandbox alive?</h2>
-          <p class="q">Three global variables were created without <code>configurable: true</code>. Why is a missing flag a memory leak and not a style preference?</p>
+          <p class="q">Three global variables were made without <code>configurable: true</code>. Why does a missing flag cause a memory leak instead of just being a style choice?</p>
         </div>
 
         <div class="pr">
-          <p>Chapter 6 explains why the sandbox object itself often cannot be freed at all. Given that, the best Vitest can do is <em>empty</em> it: delete everything the test file added, and let a small empty shell leak instead of a large full one.</p>
-          <p>Emptying it means calling <code>delete</code> on each global. And <code>delete</code> cannot remove a property that was created without <code>configurable: true</code>. It does not throw. It returns <code>false</code> and does nothing.</p>
-          <p>The <code>expect</code> library installs three globals the first time it runs inside a sandbox. In a vm pool it runs <em>inside the test file's sandbox</em>, so those globals belong to that file. All three are getters, and each getter closes over every matcher and comparison function registered for that file.</p>
+          <p>Chapter 6 explains why the sandbox object itself often cannot be freed. Because of this, Vitest must <em>empty</em> it. It deletes everything the test file added. This leaves a small empty shell instead of a large full one.</p>
+          <p>Emptying it means calling <code>delete</code> on every global. You cannot use <code>delete</code> to remove a property if it was made without <code>configurable: true</code>. The command does not throw an error. It just returns <code>false</code> and does nothing.</p>
+          <p>The <code>expect</code> library adds three globals the first time it runs inside a sandbox. In a vm pool, it runs <em>inside the test file's sandbox</em>. This means those globals belong to that file. All three are getters. Each getter holds onto every matcher and comparison function used in that file.</p>
         </div>
 
         <div class="dx">
@@ -256,9 +256,9 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>Nothing about the value changed. Only the flag did. That is the entire fix for two of these three globals.</li>
-          <li>The middle one already had the flag before this change. No comment, commit, or review says why. Its two neighbours did not — and that inconsistency is the bug.</li>
-          <li>This is a getter, not a stored value. It closes over the file's matchers, comparison functions and expect state. Deleting the property is the only way to release that closure.</li>
+          <li>The value did not change. Only the flag changed. This is the full fix for two of these three globals.</li>
+          <li>The middle global already had the flag before this change. No comment, commit, or review explains why. The other two did not have it. That difference is the bug.</li>
+          <li>This is a getter, not a stored value. It holds onto the file's matchers, comparison functions, and expect state. You must delete the property to release that closure.</li>
         </ol>
 
         <div class="dx">
@@ -272,21 +272,21 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="4">
-          <li>A fourth global with the same problem, in a different package. This one points at the whole public Vitest API.</li>
+          <li>A fourth global has the same problem in a different package. This one points to the whole public Vitest API.</li>
         </ol>
 
-        <aside class="ki"><p>The flag, not the value, is what pins the sandbox. <code>configurable: false</code> is what <code>Object.defineProperty</code> gives you by default, and it usually just means “internal, leave it alone”. Inside a sandbox you intend to throw away, it means something much stronger: this can never be released.</p></aside>
+        <aside class="ki"><p>The flag pins the sandbox, not the value. By default, <code>Object.defineProperty</code> gives you <code>configurable: false</code>. Usually, this just means "internal, do not change." Inside a sandbox you want to throw away, it means something stronger: the sandbox can never be released.</p></aside>
       </article>
 
       <article>
         <div class="hd">
           <span class="eb">Chapter 4 · two leaks of the same shape</span>
           <h2>What happens when a listener outlives the thing that registered it?</h2>
-          <p class="q">Two lists in the worker grew by one entry per test file. Why did that hold the whole sandbox — and why did the second one do it even though its listener had no work to do?</p>
+          <p class="q">Two lists in the worker grew by one entry for every test file. Why did that keep the whole sandbox alive? Why did the second list cause problems even though its listener had no work to do?</p>
         </div>
 
         <div class="pr">
-          <p>Both causes here are subscriptions. Something in the worker keeps a callback, the callback belongs to one test file, and nothing ever removes it. But they need opposite fixes, and that contrast is the useful part.</p>
+          <p>Both causes here are subscriptions. Something in the worker keeps a callback. That callback belongs to one test file, but nothing ever removes it. The two causes need opposite fixes. This contrast is important.</p>
         </div>
 
         <figure>
@@ -304,13 +304,13 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
   B -.-&gt;|"before: one hook per file"| R
   A ==&gt;|"after: unsubscribe when the file ends"| D1["entry removed"]
   B ==&gt;|"after: never register it here"| D2["nothing to remove"]</pre>
-          <figcaption>The same shape twice, fixed two different ways. One subscription is needed, so it must be cancelled. The other is not needed here at all, so it must never be created.</figcaption>
+          <figcaption>The two causes look the same, but they are fixed in different ways. One subscription is needed, so you must cancel it. The other subscription is not needed at all, so you must never create it.</figcaption>
         </figure>
 
         <h3>The subscription nobody cancelled</h3>
         <div class="pr">
-          <p>Vitest lets a run react to you pressing Ctrl-C. Each test file subscribed a callback for that. The callback captured the file's test runner — and through it, the file's code and its sandbox.</p>
-          <p>The list of callbacks lives in the worker, and had no way to remove anything. After 638 files it held 638 callbacks.</p>
+          <p>Vitest lets a test run react when you press Ctrl-C. Each test file added a callback for that event. That callback captured the file's test runner. Through the runner, it also captured the file's code and its sandbox.</p>
+          <p>The list of callbacks lives in the worker. It had no way to remove anything. After 638 files, the list held 638 callbacks.</p>
         </div>
         <div class="dx">
           <div class="dh"><b>packages/vitest/src/runtime/rpc.ts</b><s>64–72</s></div>
@@ -327,7 +327,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>An ordinary array at the top of a module in the worker. Subscribing pushed onto it; nothing ever popped. The fix is the four added lines: <code>onCancel</code> now hands back a function that removes the entry again.</li>
+          <li>This is a regular array at the top of a module in the worker. Subscribing added items to it, but nothing ever removed them. The fix is these four lines: <code>onCancel</code> now returns a function. That function removes the entry again.</li>
         </ol>
         <div class="dx">
           <div class="dh"><b>packages/vitest/src/runtime/runVmTests.ts</b><s>84–86, 135–137</s></div>
@@ -342,15 +342,15 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="2">
-          <li>Calling it inside <code>finally</code> means a test file that throws still unsubscribes. The non-vm code path got the same treatment in <code>runBaseTests.ts:93</code>.</li>
+          <li>Calling it inside <code>finally</code> means a test file still unsubscribes even if it throws an error. The non-vm code path received the same fix in <code>runBaseTests.ts:93</code>.</li>
         </ol>
 
         <h3>The hook that did nothing, and cost everything</h3>
         <div class="pr">
-          <p>The second one is stranger, and it is the reason this chapter exists.</p>
-          <p>Vitest lets a fixture live for the whole worker instead of one file. Tearing those down needs a hook, registered once per test runner. But in a vm pool, worker-wide fixtures are quietly downgraded to per-file fixtures. So in this mode the hook has nothing to tear down.</p>
-          <p>It still cost a sandbox per file. The test runner is loaded <em>inside</em> the file's sandbox, so the function it hands over belongs to that sandbox — and the list holding it belongs to the worker. A hook that did no work held everything.</p>
-          <p>You cannot fix that by unsubscribing. You fix it by never subscribing.</p>
+          <p>The second cause is more unusual. It is the reason for this chapter.</p>
+          <p>Vitest lets a fixture live for the whole worker instead of just one file. To clean those up, you need a hook. This hook is registered once per test runner. But in a vm pool, worker-wide fixtures become per-file fixtures. In this mode, the hook has nothing to clean up.</p>
+          <p>Even so, it still cost one sandbox per file. The test runner loads <em>inside</em> the file's sandbox. Therefore, the function it provides belongs to that sandbox. But the list holding that function belongs to the worker. A hook that did no work held everything in memory.</p>
+          <p>You cannot fix this by unsubscribing. You must fix it by never subscribing.</p>
         </div>
         <div class="dx">
           <div class="dh"><b>packages/vitest/src/runtime/runners/test.ts</b><s>57–61</s></div>
@@ -370,24 +370,24 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="3">
-          <li>The hook is now created only in the modes where it has work to do. In a vm pool the property is simply left <code>undefined</code>.</li>
-          <li>This unchanged line is what makes that safe. The call was already optional, so leaving the property undefined is a supported state — the old code just happened to always fill it in.</li>
+          <li>The hook is now only created in modes where it has work to do. In a vm pool, the property is simply set to <code>undefined</code>.</li>
+          <li>This unchanged line makes that safe. The call was already optional. Leaving the property as undefined is allowed. The old code just always filled it in.</li>
         </ol>
 
-        <aside class="wo"><p>Changing what <code>onCancel</code> returns is a signature change, and there is a second implementation of it. The browser client has its own copy and leaks nothing — the browser never uses sandboxes. It changed only so both versions still satisfy the same type. Add a third runtime later and it must return an unsubscribe function too.</p></aside>
+        <aside class="wo"><p>Changing what <code>onCancel</code> returns changes its signature. There is a second implementation of it. The browser client has its own copy and leaks nothing because the browser never uses sandboxes. This change was made so both versions still match the same type. If you add a third runtime later, it must also return an unsubscribe function.</p></aside>
       </article>
 
       <article>
         <div class="hd">
           <span class="eb">Chapter 5 · the cause that is not in the diff</span>
           <h2>Why must a dynamic-import callback capture nothing?</h2>
-          <p class="q">Two callbacks were arrow functions that captured the object handling the current file. Why can Node never release them — and why did fixing that also make the suite twice as fast?</p>
+          <p class="q">Two arrow functions held onto the object that handles the current file. Why does Node refuse to release them? Why did fixing this make the test suite twice as fast?</p>
         </div>
 
         <div class="pr">
-          <p>This is the one cause you cannot find by reading the diff. It lives in Node.</p>
-          <p>When you compile code with <code>vm</code>, you can pass a callback that Node will run later, whenever that code does a dynamic <code>import()</code>. Node has to keep your callback somewhere until then. It keeps it for as long as the compiled code exists, and — deliberately, with a comment saying so — it also keeps whatever your callback was given.</p>
-          <p>That is a reasonable design. It turns into a leak the moment your callback is a closure over one file's state <em>and</em> the compiled code outlives the file. Both were true here.</p>
+          <p>You cannot find this cause by looking at the code changes. It is inside Node.</p>
+          <p>When you compile code with <code>vm</code>, you can give Node a callback. Node runs this callback later when that code calls a dynamic <code>import()</code>. Node must keep your callback until then. Node keeps it as long as the compiled code exists. Node also keeps everything the callback captured. The Node code says this is on purpose.</p>
+          <p>This design is usually fine. It becomes a memory leak when your callback captures a file's state <em>and</em> the compiled code lives longer than that file. Both things happened here.</p>
         </div>
 
         <figure>
@@ -401,7 +401,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
   Note over S: the script is cached and<br/>reused by later files
   S-&gt;&gt;R: much later — import() runs
   R-&gt;&gt;E: Node calls the callback</pre>
-          <figcaption>The gap the code hides. Storing happens once, at compile time. Calling happens much later, maybe during a different file. Whatever the callback captured is held for that whole gap.</figcaption>
+          <figcaption>The code hides a gap in time. The callback is stored once during compilation. Node calls it much later, perhaps while running a different file. Node holds onto everything the callback captured for that entire time.</figcaption>
         </figure>
 
         <div class="dx">
@@ -412,11 +412,11 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>Node is holding this on purpose, and says so. Nothing in the Vitest diff shows you this line — but without it the rest of the chapter makes no sense.</li>
+          <li>Node does this on purpose. No line in the Vitest diff shows this behavior. But you need to know this to understand the rest of this chapter.</li>
         </ol>
 
         <div class="pr">
-          <p>The fix is to make both callbacks module-level functions that capture nothing. They then have to find the right file's handler at call time instead, and the two module systems need different tricks for that.</p>
+          <p>The fix is to make both callbacks module-level functions that capture nothing. These functions must find the correct file handler when they are called. The two module systems need different methods to do this.</p>
         </div>
         <div class="dx">
           <div class="dh"><b>packages/vitest/src/runtime/vm/esm-executor.ts</b><s>78–79 removed, 16–17 added</s></div>
@@ -440,12 +440,12 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="2">
-          <li><strong>For ES modules:</strong> ask the module which sandbox it belongs to, and get the handler from there. Vitest tags every sandbox it creates with a symbol for exactly this. The callback captures nothing, so it holds nothing.</li>
-          <li><strong>For CommonJS:</strong> that trick is unavailable — a compiled CommonJS script has no sandbox to ask. So the worker keeps one variable saying which file is running right now, and the callback reads it at call time. This is safe because a vm pool runs exactly one file at a time. <code>workers/vm.ts</code> clears it at teardown.</li>
+          <li><strong>For ES modules:</strong> Ask the module which sandbox it belongs to. Get the handler from that sandbox. Vitest marks every sandbox with a symbol so you can do this. The callback captures nothing, so it holds no memory.</li>
+          <li><strong>For CommonJS:</strong> You cannot use the same trick because a compiled CommonJS script cannot ask which sandbox it belongs to. Instead, the worker keeps one variable that tracks the current file. The callback reads this variable when it is called. This is safe because a vm pool runs only one file at a time. <code>workers/vm.ts</code> clears this variable when it finishes.</li>
         </ol>
 
         <div class="pr">
-          <p>Now the part nobody was aiming for. Once a compiled CommonJS script no longer remembers which file compiled it, the same compiled script can be reused by every later file. So the change adds a cache for them.</p>
+          <p>This next part was not the main goal. Now, a compiled CommonJS script does not remember which file created it. This means many files can reuse the same compiled script. The change adds a cache for these scripts.</p>
         </div>
         <div class="dx">
           <div class="dh"><b>packages/vitest/src/runtime/vm/commonjs-executor.ts</b><s>24, 118–119</s></div>
@@ -457,24 +457,24 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="4">
-          <li>This cache is only correct because of the change above it. While the compiled script remembered one file, sharing it between files would have been a bug.</li>
+          <li>The cache only works because of the change mentioned above. If the script still remembered its original file, sharing it would cause bugs.</li>
         </ol>
 
-        <aside class="ki"><p>The memory fix and the speed fix are the same fix. Capturing one file's state made the compiled script both impossible to release <em>and</em> impossible to share. Remove the capture and you get both. Total time spent importing modules fell from 1547 seconds to 587. When a cache cannot be shared, ask what it captured — that is usually also what is leaking.</p></aside>
+        <aside class="ki"><p>The memory fix and the speed fix are the same thing. Capturing one file's state made the script impossible to release <em>and</em> impossible to share. Removing the capture fixed both problems. Total import time dropped from 1547 seconds to 587 seconds. If a cache cannot be shared, check what it captured. That is usually what is causing the memory leak.</p></aside>
       </article>
 
       <article>
         <div class="hd">
           <span class="eb">Chapter 6 · when you cannot fix it, contain it</span>
           <h2>What do you do about a leak in code you do not own?</h2>
-          <p class="q">Two of the six causes are not Vitest's code. One is the JavaScript engine's own cache. The other is Node refusing to release a sandbox at all. What is left to do?</p>
+          <p class="q">Two of the six causes are not caused by Vitest code. One is a cache in the JavaScript engine. The other is Node refusing to release a sandbox. What can we do?</p>
         </div>
 
         <div class="pr">
-          <p>Four of the six causes were references Vitest could delete. These two are not, and each gets a different answer: turn one off, and give up on the other.</p>
-          <p><strong>The engine cache.</strong> V8 keeps compiled code in a cache shared by the whole worker. A cached entry holds the compiled module, and through it the file's state. Vitest cannot clear this cache. Only memory pressure clears it — which in practice means the worker has already filled up. So Vitest turns the cache off. It loses little, because Vitest keeps caches of its own that cover the same ground.</p>
-          <p><strong>The sandbox that will not die.</strong> Node does not release a sandbox once several scripts have run inside it. The internal wrappers keep it reachable even after a forced full collection. Nothing Vitest does will change that.</p>
-          <p>So if the shell cannot be freed, empty it. Delete every global the test file added, and blank the fake browser's page. What leaks afterwards is an empty object instead of a full one.</p>
+          <p>Vitest could delete four of the six causes. For these last two, there are different answers: turn one off, and give up on the other.</p>
+          <p><strong>The engine cache.</strong> V8 keeps compiled code in a cache for the whole worker. A cached entry holds the compiled module and its state. Vitest cannot clear this cache. Only memory pressure clears it. This usually happens after the worker is already full. So Vitest turns the cache off. It loses little because Vitest has its own caches that do the same thing.</p>
+          <p><strong>The sandbox that will not die.</strong> Node does not release a sandbox after several scripts run inside it. Internal wrappers keep it reachable even after a full garbage collection. Nothing Vitest does can change this.</p>
+          <p>If you cannot free the shell, empty it. Delete every global variable the test file added. Clear the fake browser's page too. What leaks now is an empty object instead of a full one.</p>
         </div>
 
         <figure>
@@ -486,7 +486,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
   Finished --&gt; Emptied: delete everything added since Recorded
   Emptied --&gt; Kept: Node still will not release it
   Kept --&gt; [*]: empty, and small enough not to matter</pre>
-          <figcaption>What the code cannot tell you: the last state is not “collected”. It is “kept, but empty” — and that is the goal, not a failure.</figcaption>
+          <figcaption>The code cannot tell you this: the last state is not “collected”. It is “kept, but empty”. This is the goal, not a failure.</figcaption>
         </figure>
 
         <div class="dx">
@@ -513,34 +513,34 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
         <ol class="nt" start="1">
-          <li>One line turns the engine cache off for this process. See the warning below — it reaches further than it looks.</li>
-          <li>Read the line under this one to see why the order matters. The globals are recorded <em>before</em> Vitest installs its own, so Vitest's globals count as “added” and get deleted too. Only the untouched ones survive.</li>
-          <li>The single rule of emptying: keep what was there when the sandbox was built, delete what anyone added afterwards. The untouched globals have to stay — work already queued still needs <code>Promise</code> and <code>setTimeout</code> to exist while it finishes.</li>
-          <li>The fake browser's page cannot be deleted, because <code>document</code> was there from the start. So it is blanked instead. In a suite using a fake browser this is usually the single biggest thing being held.</li>
+          <li>One line turns off the engine cache for this process. See the warning below. It affects more than it looks like.</li>
+          <li>Read the line under this one to see why the order matters. Globals are recorded <em>before</em> Vitest installs its own. So Vitest's globals count as “added” and get deleted too. Only the untouched ones stay.</li>
+          <li>The rule for emptying is: keep what was there when the sandbox started, and delete what anyone added later. The untouched globals must stay because work in progress still needs <code>Promise</code> and <code>setTimeout</code> to exist.</li>
+          <li>You cannot delete the fake browser's page because <code>document</code> was there at the start. So you blank it instead. In a suite using a fake browser, this is usually the biggest thing being held.</li>
         </ol>
 
-        <aside class="wo"><p><code>--no-compilation-cache</code> is a V8 flag, and V8 flags apply to the whole process. With <code>vmForks</code> each worker is its own process, so only that worker is affected. With <code>vmThreads</code> the workers share the main process, so this also turns the cache off for the main thread. The author measured no slowdown from it and notes it may deserve a setting. It does not have one yet.</p></aside>
+        <aside class="wo"><p><code>--no-compilation-cache</code> is a V8 flag. V8 flags apply to the whole process. With <code>vmForks</code>, each worker is its own process. So only that worker changes. With <code>vmThreads</code>, workers share the main process. This also turns off the cache for the main thread. The author saw no slowdown and says it might be a permanent setting. It does not have a setting yet.</p></aside>
 
         <h3>Everything else in this change</h3>
         <div class="pr">
-          <p>Nine files carry the six fixes. Here is every other file, so you know nothing was hidden from you.</p>
+          <p>Nine files contain the six fixes. Here are all the other files so you see everything.</p>
         </div>
         <ul class="cast">
-          <li><code>runBaseTests.ts</code> <b>(+40 / −35)</b> — the size is misleading. Three lines actually changed. The other 72 are the same loop, shifted two spaces because it moved inside a <code>try</code>. There is nothing to find in them. <code>runVmTests.ts</code> (+41 / −31) has the same trap.</li>
-          <li><code>leak-probe/a.test.js</code> … <code>j.test.js</code> <b>(10 files)</b> — identical to each other. Ten exist so a per-file leak has ten chances to climb above the limit of four. Read one and skip nine.</li>
-          <li><code>leak-probe/module-state.js</code> <b>(+1)</b> — a 10,000-element array, big enough to be obvious in a heap snapshot. That is its entire job.</li>
-          <li><code>types/worker.ts</code> <b>(+1 / −1)</b> — says <code>onCancel</code> now returns a function. This one line is what forces every caller in chapter 4 to be updated.</li>
-          <li><code>browser/src/client/client.ts</code> <b>(+7 / −1)</b> — the browser's own <code>onCancel</code>, changed to match the type. It fixes no leak.</li>
-          <li><code>external-executor.ts</code> <b>(+2 / −1)</b> — one call site, updated for chapter 5.</li>
-          <li><code>test/e2e/test/vm-threads.test.ts</code> <b>(+28 / −1)</b> — runs the leak test through the real CLI. The in-process test harness holds references of its own, which would drown the signal.</li>
+          <li><code>runBaseTests.ts</code> <b>(+40 / −35)</b> — the size is not accurate. Only three lines changed. The other 72 lines are the same loop, just moved two spaces inside a <code>try</code> block. There is nothing new in them. <code>runVmTests.ts</code> (+41 / −31) has the same situation.</li>
+          <li><code>leak-probe/a.test.js</code> … <code>j.test.js</code> <b>(10 files)</b> — these are all the same. There are ten so a leak in one file has ten chances to go over the limit of four. Read one and skip the other nine.</li>
+          <li><code>leak-probe/module-state.js</code> <b>(+1)</b> — this is an array with 10,000 elements. It is big enough to see in a heap snapshot. That is its only job.</li>
+          <li><code>types/worker.ts</code> <b>(+1 / −1)</b> — it says <code>onCancel</code> now returns a function. This one line forces every caller in chapter 4 to change.</li>
+          <li><code>browser/src/client/client.ts</code> <b>(+7 / −1)</b> — the browser's own <code>onCancel</code> was changed to match the type. It does not fix a leak.</li>
+          <li><code>external-executor.ts</code> <b>(+2 / −1)</b> — one place where it is called, updated for chapter 5.</li>
+          <li><code>test/e2e/test/vm-threads.test.ts</code> <b>(+28 / −1)</b> — this runs the leak test using the real CLI. The internal test tool holds its own references, which would hide the results.</li>
         </ul>
 
         <h3>Where the “why” in this story came from</h3>
         <ul class="cast">
-          <li><b>The pull request description</b> — every number here: 40–55MB per file, 30% of CPU, 19 restarts, 487s → 235s, and 1547s → 587s importing.</li>
-          <li><b>The author's own review notes</b> — the process-wide flag warning, and the browser signature change.</li>
-          <li><b>Outside this repo</b> — Vite's stack-trace list, Node's callback registry, V8's cache flag. Chapters 2, 5 and 6 depend on these, and none appear in the diff. Each is marked where it is used.</li>
-          <li><b>Still unanswered</b> — why one of the three <code>expect</code> globals already had the flag. No comment, commit message, or review says. Treat it as luck, not intent.</li>
+          <li><b>The pull request description</b> — all numbers: 40–55MB per file, 30% of CPU, 19 restarts, 487s → 235s, and 1547s → 587s importing.</li>
+          <li><b>The author's own review notes</b> — the warning about the process-wide flag, and the change to the browser signature.</li>
+          <li><b>Outside this repo</b> — Vite's stack-trace list, Node's callback registry, and V8's cache flag. Chapters 2, 5, and 6 use these. None of them are in the diff. Each is marked where it is used.</li>
+          <li><b>Still unanswered</b> — why one of the three <code>expect</code> globals already had the flag. No comment, commit message, or review says why. Treat it as luck, not a plan.</li>
         </ul>
       </article>
 
