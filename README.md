@@ -31,6 +31,16 @@ scripts/check-skills.sh
 
 Verifies that every skill folder holds a `SKILL.md` whose `name` matches the folder, that it carries an `agents/openai.yaml`, that both files agree on whether the skill is user-invoked or model-invoked, and that the index above lists exactly the skills on disk. CI runs it on each push and pull request.
 
+## Share
+
+```bash
+scripts/skill-card.mjs flashlight
+```
+
+Renders one skill as a GitHub-style PNG card sized for a post on X (16:9, rendered at 2400×1350) and copies it to the clipboard, ready to paste. The star count, fork count, description and licence are read live with `gh`, so the card is never stale.
+
+Flags: `--light` for the light theme, `--out FILE` to keep the PNG, `--no-copy` to skip the clipboard, `--open` to view it. Needs Google Chrome and an authenticated `gh`.
+
 ## Origin
 
 Originally forked from [mattpocock/skills](https://github.com/mattpocock/skills). Matt's skills are no longer kept here; install his set separately if you want them.
