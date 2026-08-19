@@ -6,13 +6,15 @@ disable-model-invocation: true
 
 A skill is a process, so reading it proves nothing. Run it.
 
-`/test-a-skill <skill>` puts the skill in front of agents that have never seen it, on inputs picked to break it. What they produce shows whether it works. **What they had to guess shows what to fix** — that is the deliverable.
+`/test-a-skill <skill>` puts the skill in front of agents that have never seen it, on work you would really bring to it. What they produce shows whether it works. **What they had to guess shows what to fix** — that is the deliverable.
 
-## 1. Pick subjects that break it differently
+## 1. Pick three realistic scenarios
 
-Three real inputs, each attacking a different weakness. The attacks worth having: the shape the skill was not written for; one far larger than its worked example; one far smaller; one whose source material is thin or contradictory. Take three of those four. Three similar inputs test one thing three times.
+Three inputs you would genuinely hand this skill, spread across the range you would genuinely use it on. Let them differ the way real work differs: in size, in subject, in how much explaining material happens to come with them. Three similar inputs test one thing three times.
 
-**Done when** each subject names the weakness it attacks, and no two name the same one.
+Realistic beats adversarial. A pathological input tells you how the skill behaves somewhere it will never go, then tempts you to spend the skill's words fixing that instead of the path every run takes.
+
+**Done when** each subject is work you would actually bring to this skill, and no two are alike.
 
 ## 2. Run it cold
 
