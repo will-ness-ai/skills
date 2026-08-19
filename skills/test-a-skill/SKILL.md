@@ -24,9 +24,9 @@ Then one agent per subject, in parallel, on your strongest model, as a **dynamic
 
 Give each agent a schema, so the gap reports arrive structured rather than parsed out of prose. Give each one the tools it needs rather than only a directory: a permission wall reads back as a defect in the skill, in every report at once.
 
-Each prompt carries **two things**: the path to the skill file, and the request a human would type. The agent has never seen the skill and learns nothing else about the task from you. That is what makes the result mean anything.
+Each prompt carries the path to the skill file, plus enough to **mock the context window this skill would really fire into**: the request a human would type, the repo and branch they sit on, what they were doing just before, what they had already decided or read. A skill is never invoked into an empty session, so testing it against one tests a situation that never happens.
 
-Every urge to explain the task is a gap you just found. Put that sentence in the skill and let the next run prove it landed — a well-briefed agent only tests your briefing.
+The line runs at the skill's own job. Context is what the window would already hold before anyone typed the command. Briefing is what you add because you doubt the agent will do the right thing — and each of those is a gap you just found, so put it in the skill and let the next run prove it landed. A well-briefed agent only tests your briefing.
 
 Ask each agent to return, alongside its output:
 
