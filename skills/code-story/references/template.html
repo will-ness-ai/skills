@@ -6,7 +6,7 @@
     · note numbering            · the note <-> code link     · mermaid (Artifact-native or CDN)
 
   Write: <title>, the two header lines, and one <article> per chapter.
-  See example.html for a finished story.
+  Delete this comment before you publish. See example.html for a finished story.
 -->
 <title>CHAPTER-STORY TITLE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,20 +62,27 @@ code{font-family:var(--f-m);font-size:.86em;background:var(--acc-s);padding:.1em
 
 .dx{margin:0 0 .9rem;border:1px solid var(--rule);background:var(--panel)}
 .dh{display:flex;gap:.6rem;align-items:baseline;padding:.5rem .85rem;border-bottom:1px solid var(--rule);font-family:var(--f-m);font-size:.72rem;flex-wrap:wrap}
-.dh b{font-weight:600}.dh s{text-decoration:none;color:var(--dim)}
+.dh b{font-weight:600}.dh .r{color:var(--dim)}
+.dh .tag{margin-left:auto;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-size:.64rem}
 .diff{margin:0;overflow-x:auto;font-family:var(--f-m);font-size:.795rem;line-height:1.85;counter-reset:l}
 .diff code{display:block;min-width:max-content;background:none;padding:0;border-radius:0;font-size:1em}
-.diff i{display:block;font-style:normal;white-space:pre;padding:0 .9rem 0 0;transition:background .12s}
-.diff i::before{content:counter(l);counter-increment:l;display:inline-block;width:3.4em;padding-right:1.1em;text-align:right;color:var(--dim);opacity:.55;user-select:none;font-variant-numeric:tabular-nums}
+.diff i{display:flex;align-items:baseline;font-style:normal;white-space:pre;padding:0 .9rem 0 0;transition:background .12s}
+.diff i::before{order:-1;content:counter(l);counter-increment:l;display:inline-block;width:4.1em;padding-right:1em;text-align:right;color:var(--dim);opacity:.55;user-select:none;font-variant-numeric:tabular-nums;flex:0 0 auto}
 .diff .a{background:var(--add-b);color:var(--add)}
 .diff .d{background:var(--del-b);color:var(--del)}
 .diff .c{color:var(--dim)}
+/* the +/- signs really are drawn here; a line's text never carries one */
+.diff .a::before{content:counter(l) " +"}
+.diff .d::before{content:"\2212";counter-increment:none}
+/* a block quoting the file BEFORE the change: numbers follow the old file instead */
+.diff.base .d::before{content:counter(l) " \2212";counter-increment:l}
+.diff.base .a::before{content:"+";counter-increment:none}
 .diff .e{color:var(--dim);opacity:.7;padding:.15rem 0;background:var(--acc-s)}
-.diff .e::before{content:"⋯ ⋯ ⋯";counter-increment:none;width:auto;padding-left:1.1em;text-align:left;letter-spacing:.3em;opacity:.8}
+.diff .e::before{content:"⋯ ⋯ ⋯";counter-increment:none;width:auto;padding:0 0 0 1.1em;text-align:left;letter-spacing:.3em;opacity:.8}
 .diff mark{background:var(--mk);color:inherit;padding:.06em .22em;border-radius:2px;font-weight:600;transition:background .12s,box-shadow .12s}
 .diff [data-n]{cursor:pointer}
-.diff [data-n]::after{content:attr(data-n);display:inline-block;margin-left:1.4em;vertical-align:baseline;
-  width:1.35rem;height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
+.diff i::after{order:-2;content:"";display:inline-block;width:1.35rem;margin:0 .45rem 0 .35rem;flex:0 0 auto}
+.diff [data-n]::after{content:attr(data-n);height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
   background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
 
 .nt{max-width:var(--m);padding-left:0;margin:0 0 1.9rem;list-style:none}
@@ -148,9 +155,23 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
                                    resumes: N is the line before the next shown line
              data-n=K           -> pairs this line with note K
              <mark>             -> the one token the note is about
-             Line numbers and the +/- signs are drawn by CSS. Write neither. -->
+
+             Line numbers and the + / − signs are drawn by CSS. Write neither: a line's
+             text starts at its first real character.
+
+             Numbering follows the file AFTER the change, so a removed line shows − and no
+             number. To quote the file BEFORE the change, use <pre class="diff base">: then
+             removed lines carry the old numbers and added lines show a bare +.
+
+             Escape < > & inside a line. `Promise<string>` and `a && b` break the markup raw.
+
+             The close tag is split across the line break (`</i` then `><i`) so no whitespace
+             lands between lines inside the <pre>. Keep it; do not reformat.
+
+             <span class=tag> in the header labels a block that is not part of the diff —
+             "unchanged", "in a dependency", "before this change". -->
         <div class="dx">
-          <div class="dh"><b>path/to/file.ts</b><s>57–59, 83</s></div>
+          <div class="dh"><b>path/to/file.ts</b><span class="r">57–59, 83</span></div>
           <pre class="diff" style="counter-reset:l 56"><code
 ><i class=c>unchanged line for context</i
 ><i class=a data-n=1>added line with a <mark>token</mark> the note explains</i
@@ -160,7 +181,8 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ></code></pre>
         </div>
 
-        <!-- NOTES — start=K matches the first data-n above. Numbers are drawn by JS. -->
+        <!-- NOTES — start=K MUST match the first data-n in the block above. Numbers are
+             drawn by JS. A mismatch fails silently: the note simply never lights up. -->
         <ol class="nt" start="1">
           <li>Why that line is the way it is. Pin one specific thing; the reader is looking straight at it.</li>
         </ol>

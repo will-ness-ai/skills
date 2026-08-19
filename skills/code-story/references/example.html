@@ -52,20 +52,27 @@ code{font-family:var(--f-m);font-size:.86em;background:var(--acc-s);padding:.1em
 
 .dx{margin:0 0 .9rem;border:1px solid var(--rule);background:var(--panel)}
 .dh{display:flex;gap:.6rem;align-items:baseline;padding:.5rem .85rem;border-bottom:1px solid var(--rule);font-family:var(--f-m);font-size:.72rem;flex-wrap:wrap}
-.dh b{font-weight:600}.dh s{text-decoration:none;color:var(--dim)}
+.dh b{font-weight:600}.dh .r{color:var(--dim)}
+.dh .tag{margin-left:auto;color:var(--dim);text-transform:uppercase;letter-spacing:.09em;font-size:.64rem}
 .diff{margin:0;overflow-x:auto;font-family:var(--f-m);font-size:.795rem;line-height:1.85;counter-reset:l}
 .diff code{display:block;min-width:max-content;background:none;padding:0;border-radius:0;font-size:1em}
-.diff i{display:block;font-style:normal;white-space:pre;padding:0 .9rem 0 0;transition:background .12s}
-.diff i::before{content:counter(l);counter-increment:l;display:inline-block;width:3.4em;padding-right:1.1em;text-align:right;color:var(--dim);opacity:.55;user-select:none;font-variant-numeric:tabular-nums}
+.diff i{display:flex;align-items:baseline;font-style:normal;white-space:pre;padding:0 .9rem 0 0;transition:background .12s}
+.diff i::before{order:-1;content:counter(l);counter-increment:l;display:inline-block;width:4.1em;padding-right:1em;text-align:right;color:var(--dim);opacity:.55;user-select:none;font-variant-numeric:tabular-nums;flex:0 0 auto}
 .diff .a{background:var(--add-b);color:var(--add)}
 .diff .d{background:var(--del-b);color:var(--del)}
 .diff .c{color:var(--dim)}
+/* the +/- signs really are drawn here; a line's text never carries one */
+.diff .a::before{content:counter(l) " +"}
+.diff .d::before{content:"\2212";counter-increment:none}
+/* a block quoting the file BEFORE the change: numbers follow the old file instead */
+.diff.base .d::before{content:counter(l) " \2212";counter-increment:l}
+.diff.base .a::before{content:"+";counter-increment:none}
 .diff .e{color:var(--dim);opacity:.7;padding:.15rem 0;background:var(--acc-s)}
-.diff .e::before{content:"⋯ ⋯ ⋯";counter-increment:none;width:auto;padding-left:1.1em;text-align:left;letter-spacing:.3em;opacity:.8}
+.diff .e::before{content:"⋯ ⋯ ⋯";counter-increment:none;width:auto;padding:0 0 0 1.1em;text-align:left;letter-spacing:.3em;opacity:.8}
 .diff mark{background:var(--mk);color:inherit;padding:.06em .22em;border-radius:2px;font-weight:600;transition:background .12s,box-shadow .12s}
 .diff [data-n]{cursor:pointer}
-.diff [data-n]::after{content:attr(data-n);display:inline-block;margin-left:1.4em;vertical-align:baseline;
-  width:1.35rem;height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
+.diff i::after{order:-2;content:"";display:inline-block;width:1.35rem;margin:0 .45rem 0 .35rem;flex:0 0 auto}
+.diff [data-n]::after{content:attr(data-n);height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
   background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
 
 .nt{max-width:var(--m);padding-left:0;margin:0 0 1.9rem;list-style:none}
@@ -164,7 +171,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p>There is also a custom test environment. It lives in the worker, not in a sandbox. Every time Vitest asks it for a new sandbox, it does two things: it forces garbage collection, then it counts how many old sandboxes are still alive.</p>
         </div>
         <div class="dx">
-          <div class="dh"><b>test/e2e/fixtures/leak-probe/leak-probe-env.ts</b><s>9–11, 25, 38</s></div>
+          <div class="dh"><b>test/e2e/fixtures/leak-probe/leak-probe-env.ts</b><span class="r">9–11, 25, 38</span></div>
           <pre class="diff" style="counter-reset:l 8"><code
 ><i class=a>v8.setFlagsFromString('--expose-gc')</i
 ><i class=a data-n=1>const <mark>gc</mark> = vm.runInNewContext('gc')</i
@@ -199,7 +206,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </div>
 
         <div class="dx">
-          <div class="dh"><b>vite · module-runner/sourcemap/interceptor.ts</b><s>24</s><s style="margin-left:auto">not in this diff — it is in a dependency</s></div>
+          <div class="dh"><b>vite · module-runner/sourcemap/interceptor.ts</b><span class="r">24</span><span class="tag">in a dependency</span></div>
           <pre class="diff" style="counter-reset:l 23"><code
 ><i class=c data-n=1>const <mark>evaluatedModulesCache</mark> = new Set&lt;EvaluatedModules&gt;()</i
 ></code></pre>
@@ -209,12 +216,12 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </ol>
 
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/workers/vm.ts</b><s>176–188</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/workers/vm.ts</b><span class="r">176–188</span></div>
           <pre class="diff" style="counter-reset:l 175"><code
 ><i class=c>  finally {</i
 ><i class=c>    await traces.$('…environment.teardown', () =&gt; vm.teardown?.())</i
-><i class=a>+   // unregisters the runner from Vite's `Error.prepareStackTrace` interceptor</i
-><i class=a data-n=2>+   await moduleRunner.<mark>close</mark>()</i
+><i class=a>// unregisters the runner from Vite's `Error.prepareStackTrace` interceptor</i
+><i class=a data-n=2>await moduleRunner.<mark>close</mark>()</i
 ><i class=c>    stripDisposedContext(context, initialContextKeys)   // chapter 6</i
 ><i class=c>    setActiveVmExecutor(undefined)                      // chapter 5</i
 ><i class=c>  }</i
@@ -239,11 +246,11 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </div>
 
         <div class="dx">
-          <div class="dh"><b>packages/expect/src/state.ts</b><s>14–28</s></div>
+          <div class="dh"><b>packages/expect/src/state.ts</b><span class="r">14–28</span></div>
           <pre class="diff" style="counter-reset:l 13"><code
 ><i class=c>Object.defineProperty(globalThis, MATCHERS_OBJECT, {</i
 ><i class=c data-n=3>  get: () =&gt; <mark>globalState</mark>,</i
-><i class=a>+   <mark>configurable</mark>: true,</i
+><i class=a><mark>configurable</mark>: true,</i
 ><i class=c>})</i
 ><i class=e style="counter-set:l 20"></i
 ><i class=c data-n=2>Object.defineProperty(globalThis, <mark>JEST_MATCHERS_OBJECT</mark>, {</i
@@ -251,7 +258,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
 ><i class=c>})</i
 ><i class=e style="counter-set:l 25"></i
 ><i class=c>Object.defineProperty(globalThis, ASYMMETRIC_MATCHERS_OBJECT, {</i
-><i class=a data-n=1>+   <mark>configurable</mark>: true,</i
+><i class=a data-n=1><mark>configurable</mark>: true,</i
 ><i class=c>})</i
 ></code></pre>
         </div>
@@ -262,12 +269,12 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </ol>
 
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/runVmTests.ts</b><s>36–41</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/runVmTests.ts</b><span class="r">36–41</span></div>
           <pre class="diff" style="counter-reset:l 35"><code
 ><i class=c>Object.defineProperty(globalThis, '__vitest_index__', {</i
 ><i class=c>  value: VitestIndex,</i
-><i class=a data-n=4>+   <mark>configurable</mark>: true,</i
-><i class=a>+   writable: true,</i
+><i class=a data-n=4><mark>configurable</mark>: true,</i
+><i class=a>writable: true,</i
 ><i class=c>})</i
 ></code></pre>
         </div>
@@ -313,16 +320,16 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p>The list of callbacks lives in the worker. It had no way to remove anything. After 638 files, the list held 638 callbacks.</p>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/rpc.ts</b><s>64–72</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/rpc.ts</b><span class="r">64–72</span></div>
           <pre class="diff" style="counter-reset:l 63"><code
 ><i class=c data-n=1>const <mark>onCancelCallbacks</mark>: ((r: CancelReason) =&gt; void)[] = []</i
 ><i class=e style="counter-set:l 65"></i
 ><i class=c>onCancel(callback) {</i
 ><i class=c>  onCancelCallbacks.push(callback)</i
-><i class=a>+   return () =&gt; {</i
-><i class=a>+     const i = onCancelCallbacks.indexOf(callback)</i
-><i class=a>+     if (i !== -1) onCancelCallbacks.splice(i, 1)</i
-><i class=a>+   }</i
+><i class=a>return () =&gt; {</i
+><i class=a>  const i = onCancelCallbacks.indexOf(callback)</i
+><i class=a>  if (i !== -1) onCancelCallbacks.splice(i, 1)</i
+><i class=a>}</i
 ><i class=c>},</i
 ></code></pre>
         </div>
@@ -330,14 +337,14 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <li>This is a regular array at the top of a module in the worker. Subscribing added items to it, but nothing ever removed them. The fix is these four lines: <code>onCancel</code> now returns a function. That function removes the entry again.</li>
         </ol>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/runVmTests.ts</b><s>84–86, 135–137</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/runVmTests.ts</b><span class="r">84–86, 135–137</span></div>
           <pre class="diff" style="counter-reset:l 83"><code
-><i class=a>+ const offCancel = state.onCancel(reason =&gt; {</i
+><i class=a>const offCancel = state.onCancel(reason =&gt; {</i
 ><i class=c>    testRunner.cancel?.(reason)</i
-><i class=a>+ })</i
+><i class=a>})</i
 ><i class=e style="counter-set:l 134"></i
 ><i class=c>} finally {</i
-><i class=a data-n=2>+   <mark>offCancel</mark>()</i
+><i class=a data-n=2><mark>offCancel</mark>()</i
 ><i class=c>}</i
 ></code></pre>
         </div>
@@ -353,17 +360,17 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p>You cannot fix this by unsubscribing. You must fix it by never subscribing.</p>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/runners/test.ts</b><s>57–61</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/runners/test.ts</b><span class="r">57–61</span></div>
           <pre class="diff" style="counter-reset:l 56"><code
-><i class=a data-n=3>+ if (<mark>this.pool</mark> !== 'vmThreads' &amp;&amp; this.pool !== 'vmForks') {</i
-><i class=a>+   this.onCleanupWorkerContext = (cleanup) =&gt; {</i
-><i class=a>+     this.workerState.onCleanup(cleanup)</i
-><i class=a>+   }</i
-><i class=a>+ }</i
+><i class=a data-n=3>if (<mark>this.pool</mark> !== 'vmThreads' &amp;&amp; this.pool !== 'vmForks') {</i
+><i class=a>this.onCleanupWorkerContext = (cleanup) =&gt; {</i
+><i class=a>  this.workerState.onCleanup(cleanup)</i
+><i class=a>}</i
+><i class=a>}</i
 ></code></pre>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/runner/run.ts</b><s>1061–1062</s><s style="margin-left:auto">unchanged</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/runner/run.ts</b><span class="r">1061–1062</span><span class="tag">unchanged</span></div>
           <pre class="diff" style="counter-reset:l 1060"><code
 ><i class=c>// runs once per test runner</i
 ><i class=c data-n=4>runner.onCleanupWorkerContext<mark>?.</mark>(async () =&gt; {</i
@@ -405,7 +412,7 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </figure>
 
         <div class="dx">
-          <div class="dh"><b>node · internal/modules/esm/utils.js</b><s>183–184</s><s style="margin-left:auto">not in this diff — it is inside Node</s></div>
+          <div class="dh"><b>node · internal/modules/esm/utils.js</b><span class="r">183–184</span><span class="tag">inside Node</span></div>
           <pre class="diff" style="counter-reset:l 182"><code
 ><i class=c>// To prevent it from being GC'ed.</i
 ><i class=c data-n=1>registry.<mark>callbackReferrer</mark> ??= referrer;</i
@@ -419,24 +426,28 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p>The fix is to make both callbacks module-level functions that capture nothing. These functions must find the correct file handler when they are called. The two module systems need different methods to do this.</p>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/vm/esm-executor.ts</b><s>78–79 removed, 16–17 added</s></div>
-          <pre class="diff" style="counter-reset:l 77"><code
-><i class=d>- importModuleDynamically: this.executor.importModuleDynamically,</i
-><i class=d>- initializeImportMeta: (meta) =&gt; { meta.resolve = this.resolve }</i
-><i class=e style="counter-set:l 15"></i
-><i class=a data-n=2>+ const vmContext = (<mark>mod.context</mark> as any)?.[VITEST_VM_CONTEXT_SYMBOL]</i
-><i class=a>+ return vmContext?.executor</i
+          <div class="dh"><b>packages/vitest/src/runtime/vm/esm-executor.ts</b><span class="r">78–79</span><span class="tag">before this change</span></div>
+          <pre class="diff base" style="counter-reset:l 77"><code
+><i class=d>importModuleDynamically: this.executor.importModuleDynamically,</i
+><i class=d>initializeImportMeta: (meta) =&gt; { meta.resolve = this.resolve }</i
 ></code></pre>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/vm/utils.ts</b><s>57–58, 73–75</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/vm/esm-executor.ts</b><span class="r">16–17</span></div>
+          <pre class="diff" style="counter-reset:l 15"><code
+><i class=a data-n=2>const vmContext = (<mark>mod.context</mark> as any)?.[VITEST_VM_CONTEXT_SYMBOL]</i
+><i class=a>return vmContext?.executor</i
+></code></pre>
+        </div>
+        <div class="dx">
+          <div class="dh"><b>packages/vitest/src/runtime/vm/utils.ts</b><span class="r">57–58, 73–75</span></div>
           <pre class="diff" style="counter-reset:l 56"><code
-><i class=a>+ let activeVmExecutor: ExternalModulesExecutor | undefined</i
-><i class=a>+ export function setActiveVmExecutor(e) { activeVmExecutor = e }</i
+><i class=a>let activeVmExecutor: ExternalModulesExecutor | undefined</i
+><i class=a>export function setActiveVmExecutor(e) { activeVmExecutor = e }</i
 ><i class=e style="counter-set:l 72"></i
-><i class=a data-n=3>+ export async function <mark>activeImportModuleDynamically</mark>(spec, ref) {</i
-><i class=a>+   return activeVmExecutor?.importModuleDynamically(spec, ref)</i
-><i class=a>+ }</i
+><i class=a data-n=3>export async function <mark>activeImportModuleDynamically</mark>(spec, ref) {</i
+><i class=a>return activeVmExecutor?.importModuleDynamically(spec, ref)</i
+><i class=a>}</i
 ></code></pre>
         </div>
         <ol class="nt" start="2">
@@ -448,12 +459,12 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p>This next part was not the main goal. Now, a compiled CommonJS script does not remember which file created it. This means many files can reuse the same compiled script. The change adds a cache for these scripts.</p>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/vm/commonjs-executor.ts</b><s>24, 118–119</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/vm/commonjs-executor.ts</b><span class="r">24, 118–119</span></div>
           <pre class="diff" style="counter-reset:l 23"><code
-><i class=a>+ const cjsScriptCache = new Map&lt;string, vm.Script&gt;()</i
+><i class=a>const cjsScriptCache = new Map&lt;string, vm.Script&gt;()</i
 ><i class=e style="counter-set:l 117"></i
-><i class=a data-n=4>+ let script = <mark>cjsScriptCache</mark>.get(filename)</i
-><i class=a>+ if (!script) { script = new vm.Script(code, opts); cjsScriptCache.set(filename, script) }</i
+><i class=a data-n=4>let script = <mark>cjsScriptCache</mark>.get(filename)</i
+><i class=a>if (!script) { script = new vm.Script(code, opts); cjsScriptCache.set(filename, script) }</i
 ></code></pre>
         </div>
         <ol class="nt" start="4">
@@ -490,26 +501,26 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         </figure>
 
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/workers/vm.ts</b><s>89–90, 198–200</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/workers/vm.ts</b><span class="r">89–90, 198–200</span></div>
           <pre class="diff" style="counter-reset:l 88"><code
-><i class=a data-n=2>+ const initialContextKeys = <mark>captureContextKeys</mark>(context)</i
+><i class=a data-n=2>const initialContextKeys = <mark>captureContextKeys</mark>(context)</i
 ><i class=c>  provideWorkerState(context, state)</i
 ><i class=e style="counter-set:l 197"></i
-><i class=a>+ // the engine caches compiled code until memory pressure clears it,</i
-><i class=a>+ // which in practice means after the worker has already filled up</i
-><i class=a data-n=1>+ v8.setFlagsFromString(<mark>'--no-compilation-cache'</mark>)</i
+><i class=a>// the engine caches compiled code until memory pressure clears it,</i
+><i class=a>// which in practice means after the worker has already filled up</i
+><i class=a data-n=1>v8.setFlagsFromString(<mark>'--no-compilation-cache'</mark>)</i
 ></code></pre>
         </div>
         <div class="dx">
-          <div class="dh"><b>packages/vitest/src/runtime/vm/utils.ts</b><s>103–113</s></div>
+          <div class="dh"><b>packages/vitest/src/runtime/vm/utils.ts</b><span class="r">103–113</span></div>
           <pre class="diff" style="counter-reset:l 102"><code
-><i class=a>+ export function stripDisposedContext(g, initialKeys) {</i
-><i class=a data-n=4>+   try { g.<mark>document.body</mark>.textContent = '' } catch {}</i
-><i class=a>+   for (const key of Object.getOwnPropertyNames(g)) {</i
-><i class=a data-n=3>+     if (<mark>initialKeys</mark>.has(key)) continue</i
-><i class=a>+     try { delete g[key] } catch {}</i
-><i class=a>+   }</i
-><i class=a>+ }</i
+><i class=a>export function stripDisposedContext(g, initialKeys) {</i
+><i class=a data-n=4>try { g.<mark>document.body</mark>.textContent = '' } catch {}</i
+><i class=a>for (const key of Object.getOwnPropertyNames(g)) {</i
+><i class=a data-n=3>  if (<mark>initialKeys</mark>.has(key)) continue</i
+><i class=a>  try { delete g[key] } catch {}</i
+><i class=a>}</i
+><i class=a>}</i
 ></code></pre>
         </div>
         <ol class="nt" start="1">
