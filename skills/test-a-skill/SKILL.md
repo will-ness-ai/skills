@@ -20,7 +20,9 @@ Realistic beats adversarial. A pathological input tells you how the skill behave
 
 Pin the skill first — a copy, or a fixed commit. The working tree moves under a long run: another session switches branch and the folder is gone mid-flight.
 
-Then one agent per subject, in parallel, on your strongest model. Use a workflow where you have one; where you are already inside one, spawn `claude -p` headless instead. Give each child the tools it needs and not merely a directory, because a permission wall reads back as a defect in the skill, in every report at once.
+Then one agent per subject, in parallel, on your strongest model, as a **dynamic workflow**. Keep the whole fan-out in that one script: its agents are given no `Agent` or `Workflow` tool of their own, so a script that expects them to spawn anything quietly comes back empty. Where you are already inside a workflow, spawn `claude -p` headless instead.
+
+Give each agent a schema, so the gap reports arrive structured rather than parsed out of prose. Give each one the tools it needs rather than only a directory: a permission wall reads back as a defect in the skill, in every report at once.
 
 Each prompt carries **two things**: the path to the skill file, and the request a human would type. The agent has never seen the skill and learns nothing else about the task from you. That is what makes the result mean anything.
 
