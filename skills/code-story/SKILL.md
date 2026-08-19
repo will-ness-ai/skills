@@ -4,15 +4,15 @@ description: Build a wizard-style HTML page that teaches how and why a change wo
 disable-model-invocation: true
 ---
 
-`/code-story <request>` — a PR, a diff, a branch, one commit — plus whatever the human says they do not understand.
+`/code-story <request>` — a **change** (a PR, a diff, a branch, one commit) — plus whatever the human says they do not understand.
 
-A **code story** cuts a change into **chapters** and walks the reader through one at a time. A chapter answers one question, and its title *is* that question. It pulls hunks from whichever files hold that mechanism, so one chapter often spans several.
+A **code story** cuts a change into **chapters** and walks the reader through one at a time. This story is narrative and walks the reader through how a change was made in logical sequential chapters. A chapter answers one question, and its title *is* that question. Each chapter pulls out a **slice** of the change (hunks) from whichever files help answer the question.
 
 A code story explains **why** the code changed the way it did. Write it for a day-one contributor — someone who knows nothing yet about this domain, this codebase, or its architecture.
 
 Tell it around code: each chapter is built from the lines it is about — changed, unchanged, or from a dependency — with a note pinning each claim to a line. Prose sets up the question and diagrams show shape; both are there to make those lines mean something.
 
-One chapter per mechanism, not per file and not per commit — a two-file change with three ideas in it gets three chapters. Write in short, plain sentences: the reader is new here, so shorter beats fuller.
+One chapter per mechanism, not per file and not per commit — a two-file change with three ideas in it gets three chapters. Write in short, plain sentences: the reader is new here, so shorter beats fuller. Use Simplified Technical English, and adopt the role of a technical writer.
 
 ## Build it
 
