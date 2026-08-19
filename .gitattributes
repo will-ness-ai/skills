@@ -2,6 +2,6 @@
 # Without this line they are 57 KB of HTML, and GitHub calls this an HTML repo.
 skills/*/references/*.html linguist-documentation
 
-# A skill is a Markdown document, so Markdown is the language of this repo.
-# GitHub does not count Markdown unless you ask it to.
+# Each skill holds its SKILL.md, so Markdown is the language of this repo.
+# GitHub counts Markdown only when you set this flag.
 *.md linguist-detectable=true

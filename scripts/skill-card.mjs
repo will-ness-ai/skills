@@ -1,18 +1,16 @@
 #!/usr/bin/env node
-// Renders one skill as a GitHub-style PNG card, sized for a post on X, and puts
-// it on the clipboard.
+// Makes a PNG card for one skill, and puts the card on the clipboard. Post the
+// card on X.
 //
 //   scripts/skill-card.mjs flashlight
 //
-// The card is the repo header — owner, avatar, stars, description — above the
-// first lines of that skill's SKILL.md, with its front matter highlighted the
-// way GitHub highlights a permalink.
+// The card shows the repo header above the first lines of the skill file. The
+// front matter has a tint, as on a GitHub permalink.
 //
-// Repo facts come from `gh` at run time so the star count is never stale. The
-// avatar is fetched once and cached. Everything else is local: the card uses
-// system fonts, so rendering needs no network.
+// A run reads the repo facts from `gh`. Thus the star count is always correct.
+// The card uses system fonts, so a run needs no other network access.
 //
-// Needs: Google Chrome, and `gh` authenticated. macOS for the clipboard step.
+// Needs Google Chrome and an authenticated `gh`. The clipboard step needs macOS.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -23,68 +21,51 @@ import { fileURLToPath } from "node:url";
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CACHE = join(homedir(), ".cache", "skill-card");
 
-// X shows a 16:9 image without cropping it. Rendering at 2x keeps the source
-// text sharp after X re-encodes the upload.
+// X shows a 16:9 image and does not crop it. The 2x scale keeps the source text
+// sharp after X compresses the upload.
 const WIDTH = 1200;
 const HEIGHT = 675;
 const SCALE = 2;
 
-// How much of the file to put in the DOM. The panel clips well before this;
-// anything more is only slower to render.
+// The panel hides all lines below this count. More lines only make a run slower.
 const MAX_LINES = 60;
 
 const CHROMES = [
-  process.env.CHROME,
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/Applications/Chromium.app/Contents/MacOS/Chromium",
   "/usr/bin/google-chrome",
 ];
 
-/* ── args ───────────────────────────────────────────────────────────── */
+const fail = (message) => {
+  throw new Error(message);
+};
 
 const args = process.argv.slice(2);
-const flag = (name) => {
+
+function flag(name) {
   const i = args.indexOf(name);
   if (i === -1) return null;
-  return args.splice(i, 2)[1] ?? "";
-};
-const has = (name) => {
+  const [, value] = args.splice(i, 2);
+  if (value === undefined) fail(`${name} needs a value`);
+  return value;
+}
+
+function has(name) {
   const i = args.indexOf(name);
   if (i === -1) return false;
   args.splice(i, 1);
   return true;
-};
-
-const outFlag = flag("--out");
-const light = has("--light");
-const noCopy = has("--no-copy");
-const openIt = has("--open");
-const skill = args[0];
-
-if (!skill || skill === "--help" || skill === "-h") {
-  console.log(`usage: scripts/skill-card.mjs <skill> [--light] [--out FILE] [--no-copy] [--open]
-
-skills: ${skillNames().join(", ")}`);
-  process.exit(skill ? 0 : 1);
 }
 
-/* ── the repo ───────────────────────────────────────────────────────── */
-
+// check-skills.sh owns the definition of a skill for this repo. It reads
+// skills/ only, and it counts engineering/ out, because that folder holds
+// redirect stubs for skills that moved. This function keeps to that definition.
 function skillNames() {
-  // engineering/ holds redirect stubs for skills that moved, not real skills —
-  // the same exclusion link-skills.sh and list-skills.sh make.
   return readdirSync(join(REPO, "skills"), { withFileTypes: true })
-    .filter((e) => e.isDirectory() && e.name !== "engineering")
-    .filter((e) => existsSync(join(REPO, "skills", e.name, "SKILL.md")))
-    .map((e) => e.name)
+    .filter((entry) => entry.isDirectory() && entry.name !== "engineering")
+    .filter((entry) => existsSync(join(REPO, "skills", entry.name, "SKILL.md")))
+    .map((entry) => entry.name)
     .sort();
-}
-
-const skills = skillNames();
-if (!skills.includes(skill)) {
-  console.error(`skill-card: no skills/${skill}/SKILL.md`);
-  console.error(`  available: ${skills.join(", ")}`);
-  process.exit(1);
 }
 
 function sh(cmd, cmdArgs) {
@@ -93,29 +74,34 @@ function sh(cmd, cmdArgs) {
 
 function nameWithOwner() {
   const url = sh("git", ["-C", REPO, "remote", "get-url", "origin"]);
-  const m = url.match(/github\.com[:/](.+?)(?:\.git)?$/);
-  if (!m) throw new Error(`cannot read owner/name from remote: ${url}`);
-  return m[1];
+  const match = url.match(/github\.com[:/](.+?)(?:\.git)?$/);
+  if (!match) fail(`cannot read owner/name from the remote: ${url}`);
+  return match[1];
 }
 
-// Live facts, with the last good answer as a fallback so a flaky network or an
-// expired gh token degrades to a stale star count instead of no card.
-function repoFacts(nwo) {
-  const cached = join(CACHE, `${nwo.replace("/", "_")}.json`);
+// One query gets every fact the card shows. It includes the language colour,
+// which `gh repo view` does not supply.
+//
+// The cache keeps the last good answer. If `gh` fails, the card shows an old
+// star count. An old count is better than no card.
+function repoFacts(owner, name) {
+  const cached = join(CACHE, `${owner}_${name}.json`);
+  const query = `{repository(owner:"${owner}",name:"${name}"){
+    stargazerCount forkCount description
+    licenseInfo{nickname name}
+    primaryLanguage{name color}
+  }}`;
   try {
-    const raw = sh("gh", [
-      "repo", "view", nwo,
-      "--json", "stargazerCount,forkCount,description,licenseInfo,primaryLanguage",
-    ]);
+    const raw = sh("gh", ["api", "graphql", "-f", `query=${query}`]);
+    const facts = JSON.parse(raw).data.repository;
+    if (!facts) fail(`no such repository: ${owner}/${name}`);
     mkdirSync(CACHE, { recursive: true });
-    writeFileSync(cached, raw);
-    return JSON.parse(raw);
+    writeFileSync(cached, JSON.stringify(facts));
+    return facts;
   } catch (err) {
-    if (existsSync(cached)) {
-      console.warn("skill-card: gh failed, using cached repo facts");
-      return JSON.parse(readFileSync(cached, "utf8"));
-    }
-    throw new Error(`gh repo view failed and nothing is cached: ${err.message}`);
+    if (!existsSync(cached)) fail(`gh failed and the cache is empty: ${err.message}`);
+    console.warn("skill-card: gh failed, the card shows cached repo facts");
+    return JSON.parse(readFileSync(cached, "utf8"));
   }
 }
 
@@ -128,13 +114,16 @@ function avatar(owner) {
   return `data:image/jpeg;base64,${readFileSync(file).toString("base64")}`;
 }
 
-/* ── the skill file ─────────────────────────────────────────────────── */
+// GitHub writes the licence as "MIT license" on a repo page.
+function licenseLabel(info) {
+  const label = info?.nickname || info?.name || "";
+  return label.replace(/\bLicense\b/, "license");
+}
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Enough markdown colouring to look like GitHub's, and no more. Each line is
-// tagged with whether it belongs to the front matter, which is what the card
-// highlights.
+// Colours the source as GitHub colours it, and no more than that. Each line
+// records whether it is part of the front matter. The card tints those lines.
 function highlight(source) {
   let fences = 0;
   return source.split("\n").map((line) => {
@@ -160,10 +149,10 @@ function fileLines(path) {
   const source = readFileSync(path, "utf8");
   const lines = highlight(source);
 
-  // The blank line that separates the front matter from the prose is dead space
-  // on a card this short, so it is dropped. Line numbers stay contiguous rather
-  // than jumping, which would read as a rendering fault.
-  const close = lines.reduce((last, l, i) => (l.frontMatter ? i : last), -1);
+  // An empty line divides the front matter from the prose. A card this short
+  // has no room for it. The line numbers stay in sequence after the cut. A gap
+  // in the numbers looks like a fault.
+  const close = lines.reduce((last, line, i) => (line.frontMatter ? i : last), -1);
   if (close >= 0 && lines[close + 1] && lines[close + 1].html === "") lines.splice(close + 1, 1);
 
   return {
@@ -173,15 +162,13 @@ function fileLines(path) {
   };
 }
 
-/* ── the card ───────────────────────────────────────────────────────── */
-
 const dark = {
-  canvas: "#0d1117", subtle: "#151b23", rule: "#3d444d", ruleSoft: "#262c36",
+  canvas: "#0d1117", subtle: "#151b23", rule: "#3d444d",
   fg: "#f0f6fc", mut: "#9198a1", btn: "#212830", btnb: "#3d444d",
   star: "#e3b341", grn: "#3fb950", key: "#79c0ff", mark: "#1f2a3d", markb: "#316dca",
 };
 const bright = {
-  canvas: "#ffffff", subtle: "#f6f8fa", rule: "#d1d9e0", ruleSoft: "#e4e8ed",
+  canvas: "#ffffff", subtle: "#f6f8fa", rule: "#d1d9e0",
   fg: "#1f2328", mut: "#59636e", btn: "#f6f8fa", btnb: "#d1d9e0",
   star: "#bf8700", grn: "#1a7f37", key: "#0550ae", mark: "#ddf4ff", markb: "#54aeff",
 };
@@ -193,14 +180,9 @@ const OCTICON = {
   file: '<svg class="oct" viewBox="0 0 16 16"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg>',
 };
 
-// GitHub writes the licence as "MIT license" on a repo page.
-function licenseLabel(info) {
-  const label = info?.nickname || info?.name || "";
-  return label.replace(/\bLicense\b/, "license");
-}
-
-function card({ owner, name, facts, avatarUri, skillName, file, skillCount, theme }) {
+function cardHtml({ owner, name, facts, avatarUri, skillName, file, skillCount, theme }) {
   const kb = `${(file.bytes / 1024).toFixed(1)} KB`;
+  const language = facts.primaryLanguage;
   const rows = file.lines
     .map((l) => `<li class="${l.frontMatter ? "mark" : ""}"><span>${l.html || " "}</span></li>`)
     .join("");
@@ -210,10 +192,13 @@ function card({ owner, name, facts, avatarUri, skillName, file, skillCount, them
 <title>${esc(skillName)}</title>
 <style>
 :root{
-  --canvas:${theme.canvas}; --subtle:${theme.subtle}; --rule:${theme.rule}; --rule-soft:${theme.ruleSoft};
+  --canvas:${theme.canvas}; --subtle:${theme.subtle}; --rule:${theme.rule};
   --fg:${theme.fg}; --mut:${theme.mut}; --btn:${theme.btn}; --btnb:${theme.btnb};
-  --star:${theme.star}; --grn:${theme.grn}; --key:${theme.key}; --mark:${theme.mark}; --markb:${theme.markb};
-  /* GitHub's own stacks — no webfont, so the card renders offline and identically each run */
+  --star:${theme.star}; --grn:${theme.grn}; --key:${theme.key};
+  --mark:${theme.mark}; --markb:${theme.markb};
+  --lang:${language?.color ?? theme.mut};
+  /* GitHub's own stacks. No webfont, so a run needs no network and each run
+     gives the same image. */
   --ui:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
 }
@@ -249,7 +234,7 @@ body{
 .meta .who{gap:.5rem;margin-right:.2rem}
 .meta .av{width:26px;height:26px;border-radius:50%;display:block;border:1px solid var(--rule)}
 .meta .who b{color:var(--fg);font-weight:600;font-size:17px}
-.meta .langdot{width:11px;height:11px;border-radius:50%;background:#e34c26;display:inline-block}
+.meta .langdot{width:11px;height:11px;border-radius:50%;background:var(--lang);display:inline-block}
 
 .file{
   margin-top:22px;border:1px solid var(--rule);border-radius:10px;overflow:hidden;
@@ -272,18 +257,14 @@ li{
   counter-increment:ln;display:flex;align-items:baseline;padding-right:16px;
   border-left:3px solid transparent;font-size:15.5px;line-height:1.74;
 }
-/* Real SKILL.md files are not hand-wrapped. Soft-wrapping keeps the ends of
-   sentences on the card instead of clipping them at the panel edge; the
-   continuation hangs clear of the gutter. */
+/* A wrapped line starts clear of the gutter. */
 li>span{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:break-word}
-/* The gutter keeps one size and one width so the numbers stay aligned even
-   where the source beside them shrinks. */
+/* The gutter holds one size and one width. The numbers stay in line where the
+   source beside them gets smaller. */
 li::before{
   content:counter(ln);flex:none;width:58px;padding-right:16px;text-align:right;
   color:var(--mut);opacity:.6;font-size:13.5px;
 }
-/* Front matter: smaller than the prose, and tinted the way GitHub tints a
-   permalinked range. */
 li.mark{font-size:11.5px;line-height:1.52;background:var(--mark);border-left-color:var(--markb)}
 
 .fm{color:var(--mut)}
@@ -303,7 +284,7 @@ li.mark{font-size:11.5px;line-height:1.52;background:var(--mark);border-left-col
 <p class="desc">${esc(facts.description ?? "")}</p>
 <div class="meta">
   <span class="i who"><img class="av" src="${avatarUri}" alt=""><b>${esc(owner)}</b></span>
-  <span class="i"><span class="langdot"></span>${esc(facts.primaryLanguage?.name ?? "")}</span>
+  <span class="i"><span class="langdot"></span>${esc(language?.name ?? "")}</span>
   <span class="i">${esc(licenseLabel(facts.licenseInfo))}</span>
   <span class="i">${skillCount} skills</span>
 </div>
@@ -315,15 +296,18 @@ li.mark{font-size:11.5px;line-height:1.52;background:var(--mark);border-left-col
 `;
 }
 
-/* ── render ─────────────────────────────────────────────────────────── */
-
 function chrome() {
-  const found = CHROMES.filter(Boolean).find((p) => existsSync(p));
-  if (!found) throw new Error("no Chrome found — set CHROME to its path");
+  const wanted = process.env.CHROME;
+  if (wanted) {
+    if (!existsSync(wanted)) fail(`CHROME points at nothing: ${wanted}`);
+    return wanted;
+  }
+  const found = CHROMES.find((path) => existsSync(path));
+  if (!found) fail("found no Chrome — set CHROME to its path");
   return found;
 }
 
-function shoot(html, out) {
+function screenshot(html, out) {
   const page = join(tmpdir(), `skill-card-${process.pid}.html`);
   writeFileSync(page, html);
   execFileSync(chrome(), [
@@ -336,12 +320,12 @@ function shoot(html, out) {
     "--virtual-time-budget=2000",
     `file://${page}`,
   ], { stdio: ["ignore", "ignore", "pipe"] });
-  if (!existsSync(out)) throw new Error("Chrome produced no image");
+  if (!existsSync(out)) fail("Chrome made no image");
 }
 
 function toClipboard(png) {
   if (process.platform !== "darwin") {
-    console.warn("skill-card: clipboard copy is macOS-only, skipped");
+    console.warn("skill-card: the clipboard step needs macOS, and the run skipped it");
     return false;
   }
   execFileSync("osascript", [
@@ -351,26 +335,48 @@ function toClipboard(png) {
   return true;
 }
 
-/* ── go ─────────────────────────────────────────────────────────────── */
+function main() {
+  const outFlag = flag("--out");
+  const light = has("--light");
+  const noCopy = has("--no-copy");
+  const openIt = has("--open");
+  const skill = args[0];
+  const skills = skillNames();
 
-const nwo = nameWithOwner();
-const [owner, name] = nwo.split("/");
-const facts = repoFacts(nwo);
-const file = fileLines(join(REPO, "skills", skill, "SKILL.md"));
-const out = outFlag ? resolve(outFlag) : join(tmpdir(), `${name}-${skill}.png`);
+  if (!skill || skill === "--help" || skill === "-h") {
+    console.log(`usage: scripts/skill-card.mjs <skill> [--light] [--out FILE] [--no-copy] [--open]
 
-shoot(card({
-  owner,
-  name,
-  facts,
-  avatarUri: avatar(owner),
-  skillName: skill,
-  file,
-  skillCount: skills.length,
-  theme: light ? bright : dark,
-}), out);
+skills: ${skills.join(", ")}`);
+    process.exit(skill ? 0 : 1);
+  }
+  if (!skills.includes(skill)) {
+    fail(`no skills/${skill}/SKILL.md — available: ${skills.join(", ")}`);
+  }
 
-const copied = noCopy ? false : toClipboard(out);
+  const [owner, name] = nameWithOwner().split("/");
+  const facts = repoFacts(owner, name);
+  const file = fileLines(join(REPO, "skills", skill, "SKILL.md"));
+  const out = outFlag ? resolve(outFlag) : join(tmpdir(), `${name}-${skill}.png`);
 
-console.log(`${out}  ${WIDTH * SCALE}x${HEIGHT * SCALE}  ★${facts.stargazerCount}${copied ? "  — on the clipboard" : ""}`);
-if (openIt) execFileSync("open", [out]);
+  screenshot(cardHtml({
+    owner,
+    name,
+    facts,
+    avatarUri: avatar(owner),
+    skillName: skill,
+    file,
+    skillCount: skills.length,
+    theme: light ? bright : dark,
+  }), out);
+
+  const copied = noCopy ? false : toClipboard(out);
+  console.log(`${out}  ${WIDTH * SCALE}x${HEIGHT * SCALE}  ★${facts.stargazerCount}${copied ? "  — on the clipboard" : ""}`);
+  if (openIt) execFileSync("open", [out]);
+}
+
+try {
+  main();
+} catch (err) {
+  console.error(`error: ${err.message}`);
+  process.exit(1);
+}

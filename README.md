@@ -37,7 +37,7 @@ Verifies that every skill folder holds a `SKILL.md` whose `name` matches the fol
 scripts/skill-card.mjs flashlight
 ```
 
-Renders one skill as a GitHub-style PNG card sized for a post on X (16:9, rendered at 2400×1350) and copies it to the clipboard, ready to paste. The star count, fork count, description and licence are read live with `gh`, so the card is never stale.
+Renders one skill as a GitHub-style PNG card sized for a post on X (16:9, rendered at 2400×1350) and copies it to the clipboard, ready to paste. The star count, fork count, description and license are read live with `gh`, so the card is never stale.
 
 Flags: `--light` for the light theme, `--out FILE` to keep the PNG, `--no-copy` to skip the clipboard, `--open` to view it. Needs Google Chrome and an authenticated `gh`.
 
