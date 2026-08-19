@@ -1,6 +1,6 @@
 ---
 name: code-story
-description: Build a wizard-style HTML page explaining why a change was made the way it was, one chapter at a time.
+description: Build a wizard-style HTML page that teaches how and why a change works.
 disable-model-invocation: true
 ---
 
