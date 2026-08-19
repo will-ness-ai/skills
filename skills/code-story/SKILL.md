@@ -6,7 +6,9 @@ disable-model-invocation: true
 
 `/code-story <request>` — a **change** (a PR, a diff, a branch, one commit) — plus whatever the human says they do not understand.
 
-A **code story** cuts a change into **chapters** and walks the reader through one at a time. This story is narrative and walks the reader through how a change was made in logical sequential chapters. A chapter answers one question, and its title *is* that question. Each chapter pulls out a **slice** of the change (hunks) from whichever files help answer the question.
+A **code story** re-cuts a change into the **stack of PRs** it could have been. One big diff lands whole; a stack arrives one reviewable step at a time, each standing on the last. Each **chapter** is one step in that stack: it answers one question, its title *is* that question, and it pulls out a **slice** of the change (hunks) from whichever files help answer it.
+
+The stack is the narrative. Each chapter answers its question and hands the reader the next one, so order the chapters the way the understanding has to build.
 
 A code story explains **why** the code changed the way it did. Write it for a day-one contributor — someone who knows nothing yet about this domain, this codebase, or its architecture.
 
