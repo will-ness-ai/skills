@@ -1,0 +1,5 @@
+interface:
+  display_name: "Test a Skill"
+  short_description: "Run a skill cold in parallel agent sessions and fix what they hit"
+policy:
+  allow_implicit_invocation: false
