@@ -12,9 +12,9 @@ The stack is the narrative. Each chapter answers its question and hands the read
 
 A code story explains **why** the code changed the way it did. Write it for a day-one contributor — someone who knows nothing yet about this domain, this codebase, or its architecture.
 
-Tell it around code: each chapter is built from the lines it is about — changed, unchanged, or from a dependency — with a note pinning each claim to a line. Prose sets up the question and diagrams show shape; both are there to make those lines mean something.
+Tell it around code: each chapter is built from the lines it is about — changed, unchanged, or from a dependency — with a note pinning each claim to a line. Everything else is there to make those lines mean something.
 
-Shape has its own devices, each for one question the lines cannot answer: a **call tree** for what runs when you call something, a **call graph** or **dependency graph** for what reaches what, a **sequence diagram** for order across participants, a **file tree** for where the change lands, and a **behaviour table** for one case as input, before, and after. Reach for one only where the code cannot show the same thing.
+Choose whatever shows the change most clearly to someone seeing it for the first time, and reach for a picture before a paragraph every time one will carry the same meaning. A **call tree** shows what runs when you call something. A **call graph** or **dependency graph** shows what reaches what. A **sequence diagram** shows order across participants. A **file tree** shows where the change lands. A **behaviour table** shows one case as input, before, and after. Prose carries what none of them can.
 
 One chapter per mechanism, not per file and not per commit — a two-file change with three ideas in it gets three chapters. Write in short, plain sentences: the reader is new here, so shorter beats fuller. Use Simplified Technical English, and adopt the role of a technical writer.
 
