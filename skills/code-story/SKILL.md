@@ -14,6 +14,8 @@ A code story explains **why** the code changed the way it did. Write it for a da
 
 Tell it around code: each chapter is built from the lines it is about — changed, unchanged, or from a dependency — with a note pinning each claim to a line. Prose sets up the question and diagrams show shape; both are there to make those lines mean something.
 
+Shape has its own devices, each for one question the lines cannot answer: a **call tree** for what runs when you call something, a **call graph** or **dependency graph** for what reaches what, a **sequence diagram** for order across participants, a **file tree** for where the change lands, and a **behaviour table** for one case as input, before, and after. Reach for one only where the code cannot show the same thing.
+
 One chapter per mechanism, not per file and not per commit — a two-file change with three ideas in it gets three chapters. Write in short, plain sentences: the reader is new here, so shorter beats fuller. Use Simplified Technical English, and adopt the role of a technical writer.
 
 ## Build it

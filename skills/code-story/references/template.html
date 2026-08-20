@@ -85,6 +85,15 @@ code{font-family:var(--f-m);font-size:.86em;background:var(--acc-s);padding:.1em
 .diff [data-n]::after{content:attr(data-n);height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
   background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
 
+/* TREE — call tree, call graph, dependency graph, or file tree. Reuses every .diff
+   mechanism (note badges, <mark>, hover pairing); only the line numbers switch off. */
+.diff.tree i::before{content:"";width:1.2em;padding-right:.5em}
+.diff.tree i.a::before{content:"+"}
+.diff.tree i.d::before{content:"\2212"}
+.diff.tree i.a,.diff.tree i.d{background:none}
+.diff.tree i.c{color:inherit}
+.diff.tree .k{color:var(--dim)}
+
 .nt{max-width:var(--m);padding-left:0;margin:0 0 1.9rem;list-style:none}
 .nt li{position:relative;margin-bottom:.35rem;padding:.4rem .6rem .4rem 2.5rem;border-left:2px solid transparent;cursor:pointer;transition:background .12s}
 .nt li::before{content:attr(data-i);position:absolute;left:.5rem;top:.5rem;
@@ -105,6 +114,13 @@ aside::before{display:block;font-family:var(--f-m);font-size:.65rem;text-transfo
 figure{margin:0 0 1.6rem;border:1px solid var(--rule);background:var(--panel)}
 figure .mermaid{margin:0;padding:1.4rem;overflow-x:auto;text-align:center}
 figcaption{padding:.7rem .95rem;border-top:1px solid var(--rule);font-size:.86rem;color:var(--dim)}
+.tb{margin:0 0 1.6rem;overflow-x:auto;border:1px solid var(--rule);background:var(--panel)}
+.tb table{border-collapse:collapse;width:100%;font-size:.88rem}
+.tb th,.tb td{padding:.5rem .8rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+.tb th{font-family:var(--f-m);font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);font-weight:600;white-space:nowrap}
+.tb tr:last-child td{border-bottom:0}
+.tb td:first-child{font-family:var(--f-m);font-size:.82rem}
+.tb .was{color:var(--del)}.tb .now{color:var(--add)}
 
 .cast{max-width:var(--m);font-size:.93rem;padding-left:1.2rem}
 .cast li{margin-bottom:.55rem;color:var(--dim)}
@@ -140,13 +156,35 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
           <p class="q">One or two sentences saying what the reader will not understand without this chapter.</p>
         </div>
 
-        <!-- DIAGRAM — only where a picture shows something the code cannot. -->
+        <!-- DIAGRAM — only where a picture shows something the code cannot.
+             Pick the kind by the question it answers:
+               flowchart        what rests on what   (call graph, dependency graph)
+               sequenceDiagram  who calls whom, in order, across participants
+               stateDiagram-v2  what states a thing moves through -->
         <h3>optional section label</h3>
         <figure>
           <pre class="mermaid">flowchart LR
   A["short label"] --> B["short label"]</pre>
           <figcaption>What the picture makes visible that the code alone does not.</figcaption>
         </figure>
+
+        <!-- TREE — a call tree, a call hierarchy, or a file tree. Indent with spaces
+             inside the <i>; the <pre> keeps them. Line classes carry the change:
+               a = frame or file this change adds     d = one it removes
+               c = one that was already there         k = dimmed, for a path prefix
+             data-n and <mark> work exactly as they do in a diff block, so a node can
+             carry a note. Line numbers switch off; nothing else changes.
+             Reach for a tree when the shape is a hierarchy. Use a mermaid flowchart
+             instead when it is a graph — anything with a cycle or many roots. -->
+        <div class="dx">
+          <div class="dh"><b>what runs when you call <code>main()</code></b><span class="tag">call tree</span></div>
+          <pre class="diff tree"><code
+><i class=c>main</i
+><i class=c>  createFactory(x, y, z)</i
+><i class=a data-n=2>    <mark>getCredentials()</mark></i
+><i class=c>  runFactory(f)</i
+></code></pre>
+        </div>
 
         <!-- DIFF BLOCK
              line classes: a = added   d = removed   c = unchanged   e = elision (⋯)
@@ -186,6 +224,17 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         <ol class="nt" start="1">
           <li>Why that line is the way it is. Pin one specific thing; the reader is looking straight at it.</li>
         </ol>
+
+        <!-- BEHAVIOUR TABLE — what the reader would observe, before and after. One row
+             per case that actually changes. Keep it to what you can point at in the
+             code or the tests; a plausible-looking row nobody checked is worse than
+             no table. -->
+        <div class="tb">
+          <table>
+            <tr><th>given</th><th>before</th><th>after</th></tr>
+            <tr><td>the input case</td><td class="was">what happened</td><td class="now">what happens now</td></tr>
+          </table>
+        </div>
 
         <div class="pr">
           <p>The prose. Explain the mechanism to a competent developer who has never seen this codebase.</p>

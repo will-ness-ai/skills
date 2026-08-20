@@ -75,6 +75,15 @@ code{font-family:var(--f-m);font-size:.86em;background:var(--acc-s);padding:.1em
 .diff [data-n]::after{content:attr(data-n);height:1.35rem;line-height:1.28rem;text-align:center;font-size:.66rem;font-weight:700;
   background:var(--panel);color:var(--acc);border:1.5px solid var(--acc);border-radius:50%;font-family:var(--f-m);transition:all .12s}
 
+/* TREE — call tree, call graph, dependency graph, or file tree. Reuses every .diff
+   mechanism (note badges, <mark>, hover pairing); only the line numbers switch off. */
+.diff.tree i::before{content:"";width:1.2em;padding-right:.5em}
+.diff.tree i.a::before{content:"+"}
+.diff.tree i.d::before{content:"\2212"}
+.diff.tree i.a,.diff.tree i.d{background:none}
+.diff.tree i.c{color:inherit}
+.diff.tree .k{color:var(--dim)}
+
 .nt{max-width:var(--m);padding-left:0;margin:0 0 1.9rem;list-style:none}
 .nt li{position:relative;margin-bottom:.35rem;padding:.4rem .6rem .4rem 2.5rem;border-left:2px solid transparent;cursor:pointer;transition:background .12s}
 .nt li::before{content:attr(data-i);position:absolute;left:.5rem;top:.5rem;
@@ -95,6 +104,13 @@ aside::before{display:block;font-family:var(--f-m);font-size:.65rem;text-transfo
 figure{margin:0 0 1.6rem;border:1px solid var(--rule);background:var(--panel)}
 figure .mermaid{margin:0;padding:1.4rem;overflow-x:auto;text-align:center}
 figcaption{padding:.7rem .95rem;border-top:1px solid var(--rule);font-size:.86rem;color:var(--dim)}
+.tb{margin:0 0 1.6rem;overflow-x:auto;border:1px solid var(--rule);background:var(--panel)}
+.tb table{border-collapse:collapse;width:100%;font-size:.88rem}
+.tb th,.tb td{padding:.5rem .8rem;text-align:left;vertical-align:top;border-bottom:1px solid var(--rule)}
+.tb th{font-family:var(--f-m);font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);font-weight:600;white-space:nowrap}
+.tb tr:last-child td{border-bottom:0}
+.tb td:first-child{font-family:var(--f-m);font-size:.82rem}
+.tb .was{color:var(--del)}.tb .now{color:var(--add)}
 
 .cast{max-width:var(--m);font-size:.93rem;padding-left:1.2rem}
 .cast li{margin-bottom:.55rem;color:var(--dim)}
@@ -536,6 +552,32 @@ button:focus-visible,.nt li:focus-visible,.diff i:focus-visible{outline:2px soli
         <div class="pr">
           <p>Nine files contain the six fixes. Here are all the other files so you see everything.</p>
         </div>
+        <div class="dx">
+          <div class="dh"><b>where all 25 files land</b><span class="tag">file tree</span></div>
+          <pre class="diff tree"><code
+><i class=c>packages/</i
+><i class=c>  browser/src/client/client.ts            <span class="k">+7 −1</span></i
+><i class=c>  expect/src/state.ts                     <span class="k">+5</span></i
+><i class=c>  vitest/src/runtime/</i
+><i class=c>    runBaseTests.ts                       <span class="k">+40 −35</span></i
+><i class=c>    runVmTests.ts                         <span class="k">+41 −31</span></i
+><i class=c>    rpc.ts                                <span class="k">+7 −1</span></i
+><i class=c>    external-executor.ts                  <span class="k">+2 −1</span></i
+><i class=c>    runners/test.ts                       <span class="k">+7 −3</span></i
+><i class=c>    workers/vm.ts                         <span class="k">+21</span></i
+><i class=c>    vm/utils.ts                           <span class="k">+71 −1</span></i
+><i class=c>    vm/esm-executor.ts                    <span class="k">+35 −15</span></i
+><i class=c>    vm/commonjs-executor.ts               <span class="k">+24 −13</span></i
+><i class=c>  vitest/src/types/worker.ts              <span class="k">+1 −1</span></i
+><i class=c>test/e2e/</i
+><i class=a>  fixtures/leak-probe/                    <span class="k">new directory</span></i
+><i class=a>    a.test.js … j.test.js                 <span class="k">10 files, +15 each</span></i
+><i class=a>    leak-probe-env.ts                     <span class="k">+43</span></i
+><i class=a>    module-state.js                       <span class="k">+1</span></i
+><i class=c>  test/vm-threads.test.ts                 <span class="k">+28 −1</span></i
+></code></pre>
+        </div>
+
         <ul class="cast">
           <li><code>runBaseTests.ts</code> <b>(+40 / −35)</b> — the size is not accurate. Only three lines changed. The other 72 lines are the same loop, just moved two spaces inside a <code>try</code> block. There is nothing new in them. <code>runVmTests.ts</code> (+41 / −31) has the same situation.</li>
           <li><code>leak-probe/a.test.js</code> … <code>j.test.js</code> <b>(10 files)</b> — these are all the same. There are ten so a leak in one file has ten chances to go over the limit of four. Read one and skip the other nine.</li>
