@@ -5,7 +5,7 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 ## Skills
 
 - **[cmux](./skills/cmux/SKILL.md)** — Drive the local cmux app: workspaces, panes, surfaces, terminal input, agent sessions, and browser surfaces. Needs cmux.app and its bundled `cmux` CLI on `PATH`. No external dependencies.
-- **[cmux-handoff](./skills/cmux-handoff/SKILL.md)** — Hand this conversation to a fresh claude in a new cmux tab, with the prompt typed and waiting for the user to submit. Needs cmux.app and its bundled `cmux` CLI on `PATH`. External dependencies: `/handoff`.
+- **[cmux-handoff](./skills/cmux-handoff/SKILL.md)** — Hand this conversation to a fresh claude in a new cmux tab, with the prompt typed and waiting for the user to submit. Needs cmux.app and its bundled `cmux` CLI on `PATH`. No external dependencies.
 - **[code-story](./skills/code-story/SKILL.md)** — Build a wizard-style HTML page that teaches how and why a change works, one chapter at a time. No external dependencies.
 - **[find-standards](./skills/find-standards/SKILL.md)** — Fan out subagents to find how your problem is already solved: standards you could adopt, and the industry's best practices. External dependencies: `/research`, `/writing-for-agents`.
 - **[flashlight](./skills/flashlight/SKILL.md)** — Shine a light into a wayfinder map's fog: work one direction now, out of frontier order, or redraw the map itself. Needs an existing wayfinder map. External dependencies: `/grilling`, `/domain-modeling`, `/research`, `/prototype`.

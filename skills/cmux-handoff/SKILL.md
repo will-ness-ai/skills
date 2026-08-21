@@ -5,8 +5,15 @@ argument-hint: "What will the next session be used for? Add any claude flags."
 disable-model-invocation: true
 ---
 
-Run `/handoff` to write the handoff document, passing on whatever the user said
-the next session covers.
+Write a handoff document that summarises this conversation, so a fresh agent
+picks the work up. Save it in the OS temporary directory.
+
+- Give it a "suggested skills" section naming the skills the next agent invokes.
+- Point at specs, plans, ADRs, issues, commits, and diffs by path or URL, and
+  leave their content where it is.
+- Redact API keys, passwords, and personally identifiable information.
+- Read the arguments as what the next session focuses on, and shape the document
+  around them.
 
 Then open the session, keeping the prompt to one line:
 
