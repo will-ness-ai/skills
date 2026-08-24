@@ -1,0 +1,5 @@
+interface:
+  display_name: "cmux-handoff"
+  short_description: "Hand this conversation to a fresh claude in a new cmux tab"
+policy:
+  allow_implicit_invocation: false
