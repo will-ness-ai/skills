@@ -85,8 +85,8 @@ Phase 1 of the reconciliation work (LED-91). Phase 2 will add fuzzy matching.
 Per review with Sam: we keep exact matching only for now.
 """
 
-# after
-"""Reconciliation engine."""
+# after: deleted. The phase plan and the review note are history, and a
+# one-line name of the module tells a reader nothing the file name does not.
 ```
 
 ### Bare policy
@@ -96,7 +96,10 @@ Per review with Sam: we keep exact matching only for now.
 // Only 503 is retryable — every other status is a real failure, not a pause.
 if (res.status !== 503) throw new Error(`upload failed: ${res.status}`);
 
-// after: the reason, if the code cannot show it
+// after: deleted, because nothing in the code, commits or session says why
+if (res.status !== 503) throw new Error(`upload failed: ${res.status}`);
+
+// after, when the API docs linked from the commit give the reason
 // The storage API returns 503 only while it rebalances; other errors are final.
 if (res.status !== 503) throw new Error(`upload failed: ${res.status}`);
 ```
@@ -193,6 +196,12 @@ def reconcile(ledger):
     return {"status": "ok", "mismatches": 0}
 ```
 
+The line it adds to the PR description:
+
+```text
+reconcile() is a stub that always reports no mismatches. Real reconciliation is not implemented yet.
+```
+
 ### Debug output and commented-out code
 
 ```js
@@ -257,5 +266,5 @@ before:
 after:
   Before: an upload that hits a 503 fails at once and the user has to retry by hand.
 
-  After: the client retries up to three times with exponential backoff before it reports the failure.
+  After: the client makes up to three attempts, with exponential backoff between them, before it reports the failure.
 ```
