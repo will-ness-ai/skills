@@ -10,87 +10,105 @@ Three kinds of slop, in this order:
 
 1. **Comments** that narrate the code, retell the session, or run longer than what they explain.
 2. **Dead code**: scaffolding nothing calls, stubs, debug output, commented-out code.
-3. **Commit and PR text** that is longer than the change.
+3. **Commit and PR text** that is longer than the change, or claims more than it does.
 
-This is a pass you run after the work, not a rule the agent follows while it works. Rules against comments stop holding within a few turns; a separate pass holds. Run it in a fresh session or subagent if you can. The longer the session that wrote the code, the more of its habits it brings to the cleanup.
+Run it in a fresh session or subagent if you can: the longer the session that wrote the code, the more of its habits it brings to the cleanup.
 
-The pass changes no behaviour. It deletes comments, deletes code nothing reaches, and rewrites prose. If a fix would change what the code does, propose it in the report and leave it.
+The pass keeps behaviour as it is. It deletes comments, deletes code nothing reaches, and rewrites prose. Debug output is the one exception: deleting it changes what the program prints, so the report lists each one. Every other fix that would change what the code does or what a caller sees goes to **Left for you**, the report's list of changes the human decides on.
 
 See [references/examples.md](references/examples.md) for before and after cases of each.
 
 ## 1. Read the change
 
-List the commits and the files the target changes. Read each changed file in full, not only the hunks: a comment is slop or not depending on the code around it.
+Find the base: the PR's base branch, else the branch's upstream, else the repo's default branch. List the commits and the files the target modifies. These are the **touched files**. Read each one in full, not only the hunks: a comment is slop or not depending on the code around it.
 
-Leave alone generated files, vendored code, lockfiles, and anything the repo's ignore or lint config already excludes.
+Skip generated files, vendored code, lockfiles, and anything the repo's ignore or lint config already excludes.
 
-**Done when** you know every file the target touches and why each commit exists.
+Run the project's checks and write down the result: build, type check, lint, and tests, using only what the repo itself configures. This is the **baseline** step 4 compares against.
+
+**Done when** you know every touched file, why each commit exists, and the baseline of every check.
 
 ## 2. Cut the comments
 
-The model copies the comments it sees. A file that keeps its verbose comments gets new ones on the next edit. So this step covers every comment in each touched file, not only the lines the target added. Outside the target's own lines, only delete. Do not rewrite a comment someone else wrote.
+The model copies the comments it sees: a file that keeps its verbose comments gets new ones on the next edit. So this step covers every comment in each touched file, not only the lines the target added.
 
-A comment stays only if a competent reader of this code would get something wrong without it: a constraint the code cannot show, a workaround for a bug elsewhere, a reason that is not obvious from the code. Everything else goes:
+**The keep test**: a comment stays only if a competent reader of this code would get something wrong without it: a constraint the code cannot show, a workaround for a bug elsewhere, a reason that is not obvious from the code. Everything else goes:
 
 - **Narration**: says what the next line does. `// Parse the hours` above `parseInt(raw)`.
-- **Session leaks**: speaks to the human or retells the chat. "As requested", "Now we", "Fixed the issue where", "Updated to".
-- **History**: what the code used to be, what was removed, "Phase 2", review replies, ticket IDs. That belongs in the commit message. If the reason is worth keeping, move it there.
+- **Session leaks**: speaks to the human or retells the chat. "As requested", "Now we", "Fixed the issue where", "Updated to", "as discussed".
+- **History**: what the code used to be, what was removed, "Previously", "this was the bug", "Phase 2", review replies, reviewer names, ticket IDs. A reason worth keeping goes in the commit message: carry it to step 6.
 - **Editorial**: argues for the design, or repeats the same point in a docstring and an inline comment.
+- **Bare policy**: states what the code already shows, such as `// Only 503 is retryable` above `if (status !== 503)`. If the reason matters, write the reason.
 
-Rewrite each comment that stays, in the target's own lines:
+Rewrite each comment that stays in the target's own lines:
 
-- One line where one line will do. Never more lines than the code it explains.
-- Plain words. No em dashes, no coined terms ("the oracle", "load-bearing"), no aphorisms. `// Asked, never assumed — no path may fall back to the column default.` becomes `// Callers must pass this; do not use the column default.`
-- Doc comments on public APIs stay, cut to what a caller needs. Match how the rest of the repo writes them.
+- One line where one line will do, and never more lines than the code it explains.
+- Plain words in a plain sentence, using the terms the code already uses. `// Asked, never assumed — no path may fall back to the column default.` becomes `// Callers must pass this; do not use the column default.`
+- Doc comments on public APIs stay, cut to what a caller needs, in the repo's own doc style. Where the target's are the only ones, use the language's standard doc format in one line.
 
-Never touch license headers, directives (`eslint-disable`, `# type: ignore`, `// @ts-expect-error`, pragmas, build tags), or `TODO`s that name a person or an issue tracker entry the repo already uses.
+Outside the target's own lines, someone else wrote the comment, so delete rather than rewrite. When such a comment wraps a fact a caller needs in slop, cut it down to that fact and change nothing else: `// The bucket starts full — a cold start is not a debt.` becomes `// The bucket starts full.`
 
-**Done when** every remaining comment in the touched files passes the test above, and no comment outside the target's lines was rewritten.
+Keep exactly as they are: license headers, directives (`eslint-disable`, `nolint`, `# type: ignore`, `// @ts-expect-error`, pragmas, build tags), `TODO`s that name a person or an issue tracker entry the repo already uses, and the `TODO` on a stub step 3 reports.
+
+**Done when** every remaining comment in the touched files passes the keep test, and every comment outside the target's lines is either untouched, deleted, or cut down to its fact.
 
 ## 3. Cut the dead code
 
-Only in the lines the target added. Older dead code is someone else's call.
+This step covers the lines the target added. Dead code in older lines goes to Left for you.
 
-- **Unreferenced code**: functions, classes, modules, exports, and parameters the target added that nothing uses. Search the whole repo, including tests, config, and string references such as route tables or reflection, before you delete. If any use might exist, keep it and list it in the report.
-- **Empty scaffolding**: traits, interfaces, base classes, and files with one implementation or none, added for flexibility nobody asked for. Delete it when nothing depends on it. When code depends on it, propose the inlining in the report instead.
-- **Debug output**: `console.log`, `print`, `dbg!`, temporary logging. Keep logging that goes through the project's logger at a level the project uses elsewhere.
+- **Unreferenced code**: functions, classes, modules, and exports the target added that nothing uses. Search the whole repo first, including tests, config, and string references such as route tables, registries or reflection. Where a use might exist, keep it and add it to Left for you.
+- **Unused parameters**: delete them from private functions. On a public function, removing one changes callers, so it goes to Left for you.
+- **Empty scaffolding**: traits, interfaces, base classes, and files with one implementation or none, added for flexibility nobody asked for. Delete it when nothing depends on it; when code depends on it, the inlining goes to Left for you.
+- **Debug output**: `console.log`, `print`, `dbg!`, temporary logging. Logging through the project's logger, at a level the project uses elsewhere, stays.
 - **Commented-out code**: delete it. Git has it.
-- **Stubs**: `todo!()`, `raise NotImplementedError`, empty bodies, `// TODO: implement`, functions that return a hard-coded value where real logic belongs. Do not delete a stub that something calls. It is unfinished work presented as finished, and the human needs to know. List each one first in the report.
+- **Stubs**: `todo!()`, `raise NotImplementedError`, empty bodies, `// TODO: implement`, functions that return a hard-coded value where real logic belongs. A stub that something calls stays, with its `TODO`: it is unfinished work presented as finished, and it leads the report.
 
-**Done when** each deletion was checked against the whole repo, and every stub is in the report.
+Code that is reached stays, even when it is clumsy. A one-use wrapper or a needless temporary is slop, but removing it changes call sites, so it goes to Left for you.
 
-## 4. Size the commit and PR text
+**Done when** each deletion was checked against the whole repo, and every stub is recorded for the report.
+
+## 4. Prove nothing broke
+
+Run the checks again. Every check that passed at the baseline still passes. A check that improves, such as lint no longer flagging an unused import, is fine. A check that gets worse means the pass removed something that was used: put it back.
+
+Then read the pass's own diff. It holds deleted comments, rewritten comments, deleted dead code, and deleted debug output, and nothing else. Revert anything else.
+
+**Done when** every check is at or above the baseline and the diff holds only those four kinds of change.
+
+## 5. Commit the cleanup
+
+Commit it as its own commit, on top of the work, so a reviewer can read it apart from the work. Write its message the way the repo writes commit messages: a subject that names the cleanup, and the trailers the repo's recent commits use.
+
+On a branch that is already pushed, the commit reaches the PR only once it is pushed. Ask, and push on a yes.
+
+**Done when** the cleanup is one commit on top of the target, pushed if the human said yes.
+
+## 6. Size the commit and PR text
 
 The text describes the change at the size of the change. A three-line fix gets a subject line.
 
 - **Subject**: imperative, says what changed, under about 60 characters. "Retry uploads on 503", not "Comprehensive robustness improvements to upload handling".
-- **Body**: only when the reason is not obvious from the diff. A few plain sentences on why. No headings, no checkmark lists, no file-by-file tour, no test-run claims, no "robust", "comprehensive", "seamless".
-- **PR description**: the repo's PR template if it has one. If not, what a reviewer sees before and after, and why. Keep links to issues. Drop the list of every file touched.
+- **Body**: only when the reason is not obvious from the diff. A few plain sentences on why, in the words a colleague would use. Reasons carried from deleted comments go here.
+- **PR description**: the repo's PR template if it has one. If not, what a reviewer sees before and after, and why, with links to issues.
+- **Claims**: every claim matches the diff. Cut "production-ready", "all tests pass", or "implemented" where the diff does not show it. Name every stub from step 3 in the PR description, so a reviewer knows what is unfinished.
 
-Keep trailers (`Co-Authored-By`, `Signed-off-by`, issue references) exactly as they are.
+Keep the trailer block exactly as it is: `Co-Authored-By`, `Signed-off-by`, issue references, and attribution lines such as `🤖 Generated with Claude Code`.
 
 Draft the new text. Then:
 
-- **Unpushed commits**: show the rewording and, on a yes, apply it with a rebase.
-- **Pushed commits**: never rewrite. Put the better text in the PR description instead, or in the squash-merge message.
-- **The PR description**: show the new text and edit the PR on a yes.
+- **Unpushed commits**: show the rewording and, on a yes, apply it with a rebase. The rebase rewords the work commits under the cleanup commit, which stays on top.
+- **Pushed commits**: they stay as they are. Put the better text in the PR description, or in the squash-merge message.
+- **The PR description**: show the new text and edit the PR on a yes. With no PR yet, the draft is ready for when it opens.
 
 **Done when** every commit message and the PR description has a drafted replacement, or is already the right size.
 
-## 5. Prove nothing changed
+## 7. Report
 
-Run the project's build, type check, lint, and tests. They pass exactly as they did before the pass. If one fails, the pass removed something that was used. Put it back.
+Give the human a short report:
 
-Then read the pass's own diff. It holds only deleted comments, rewritten comments, deleted dead code, and deleted debug output. Anything else is out of scope. Revert it.
-
-**Done when** the checks match their state before the pass and the diff holds nothing else.
-
-## 6. Report
-
-Commit the cleanup as its own commit, so a reviewer can read it apart from the work. Then give the human a short report:
-
-1. **Stubs** found, each with its file and line. These come first because they are unfinished work.
-2. Comments deleted and rewritten, as counts per file.
-3. Dead code deleted, each with one line on why it was dead.
-4. Proposals left unapplied: inlining, kept-but-maybe-unused code.
-5. The commit and PR text drafts, waiting for a yes.
+1. **Stubs**, each with its file and line, and any text that claims they work. These come first because they are unfinished work.
+2. Comments deleted and rewritten, as counts per file. A multi-line comment counts as one.
+3. Dead code deleted, each with one line on why it was dead. Debug output is listed here.
+4. **Left for you**: inlining, kept-but-maybe-unused code, unused public parameters, bugs noticed, dead code in older lines.
+5. The commit and PR text drafts, waiting for a yes, and the reasons carried into them from deleted comments. If the human says no, those reasons survive only here.
+6. Whether the cleanup commit is pushed.

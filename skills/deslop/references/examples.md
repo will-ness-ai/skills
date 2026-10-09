@@ -53,6 +53,66 @@ delay = backoff(attempt)
 delay = backoff(attempt)
 ```
 
+### Fix comment that retells the bug
+
+The reason moves into the body of the fix commit.
+
+```go
+// before (the fix commit's own comment)
+// Clamp to capacity — this was the bug. Previously the refill had no
+// upper bound, so after a long idle period the bucket could hold far more
+// tokens than its capacity. Fixed as discussed.
+l.tokens = min(l.tokens, l.capacity)
+
+// after
+l.tokens = min(l.tokens, l.capacity)
+```
+
+```text
+Clamp token bucket to capacity after refill
+
+After a long idle period the refill had no upper bound, so the next
+burst could exceed the configured capacity.
+```
+
+### Module docstring holding history
+
+```python
+# before
+"""Reconciliation engine.
+
+Phase 1 of the reconciliation work (LED-91). Phase 2 will add fuzzy matching.
+Per review with Sam: we keep exact matching only for now.
+"""
+
+# after
+"""Reconciliation engine."""
+```
+
+### Bare policy
+
+```ts
+// before
+// Only 503 is retryable — every other status is a real failure, not a pause.
+if (res.status !== 503) throw new Error(`upload failed: ${res.status}`);
+
+// after: the reason, if the code cannot show it
+// The storage API returns 503 only while it rebalances; other errors are final.
+if (res.status !== 503) throw new Error(`upload failed: ${res.status}`);
+```
+
+### Old comment with a fact inside
+
+Outside the target's lines, cut it down to the fact.
+
+```go
+// before
+// The bucket starts full — a cold start is not a debt.
+
+// after
+// The bucket starts full.
+```
+
 ### Session leak
 
 ```go
@@ -112,20 +172,20 @@ pub const MARKER: &'static str = "scaffold: mortality";
 
 ### One-use wrapper
 
-Propose this one; do not apply it. The wrapper is reached, so removing it changes call sites.
+The wrapper is reached, so removing it changes call sites. It goes to Left for you.
 
 ```ts
 // before
 function getUserById(id: string) { return fetchUser(id); }
 const user = await getUserById(id);
 
-// proposed in the report
+// in Left for you
 const user = await fetchUser(id);
 ```
 
 ### Stub left as finished work
 
-Report it first. Do not delete it.
+It stays, with its TODO, and leads the report. The PR text names it.
 
 ```python
 def reconcile(ledger):
@@ -162,9 +222,15 @@ before (reported shape: "a slop article for every one line commit"):
   - ✅ Added backoff helper
   - ✅ All tests pass
 
+  Co-Authored-By: Claude <noreply@anthropic.com>
+
 after:
   Retry uploads on 503 with exponential backoff
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
 ```
+
+The trailer block stays exactly as it was.
 
 ### Body only when the reason is not in the diff
 
