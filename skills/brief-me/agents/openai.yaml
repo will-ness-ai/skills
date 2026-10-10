@@ -1,0 +1,5 @@
+interface:
+  display_name: "Brief Me"
+  short_description: "Learn enough about an agent's question to answer it well"
+policy:
+  allow_implicit_invocation: false
