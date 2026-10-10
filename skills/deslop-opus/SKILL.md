@@ -1,10 +1,10 @@
 ---
-name: deslop
+name: deslop-opus
 description: Clean agent slop off a branch after the work is done. Cuts narrating comments, dead code and stubs, and sizes commit and PR text to the change.
 disable-model-invocation: true
 ---
 
-`/deslop [target]` cleans up after an agent. The **target** is a branch, a PR, or a commit range; with none, it is the current branch against its base.
+`/deslop-opus [target]` cleans up after an agent. The **target** is a branch, a PR, or a commit range; with none, it is the current branch against its base.
 
 Three kinds of slop, in this order:
 
