@@ -1,0 +1,5 @@
+interface:
+  display_name: "Deslop Opus"
+  short_description: "Cut narrating comments, dead code and oversized commit text from a branch"
+policy:
+  allow_implicit_invocation: false
