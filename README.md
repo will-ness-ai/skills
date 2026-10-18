@@ -4,6 +4,7 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 
 ## Skills
 
+- **[agent-tools](./skills/agent-tools/SKILL.md)** — Build commands for agents in AXI style: one call runs a chain of tool calls and prints only what the agent uses next. Model-invoked. External dependencies: `/writing-for-agents`.
 - **[cmux](./skills/cmux/SKILL.md)** — Drive the local cmux app: workspaces, panes, surfaces, terminal input, agent sessions, and browser surfaces. Needs cmux.app and its bundled `cmux` CLI on `PATH`. No external dependencies.
 - **[code-story](./skills/code-story/SKILL.md)** — Build a wizard-style HTML page that teaches how and why a change works, one chapter at a time. No external dependencies.
 - **[find-standards](./skills/find-standards/SKILL.md)** — Fan out subagents to find how your problem is already solved: standards you could adopt, and the industry's best practices. External dependencies: `/research`, `/writing-for-agents`.

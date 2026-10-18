@@ -1,0 +1,3 @@
+interface:
+  display_name: "Agent Tools"
+  short_description: "Build commands for agents in AXI style"
