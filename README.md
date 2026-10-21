@@ -10,11 +10,22 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 - **[find-standards](./skills/find-standards/SKILL.md)** — Fan out subagents to find how your problem is already solved: standards you could adopt, and the industry's best practices. External dependencies: `/research`, `/writing-for-agents`.
 - **[flashlight](./skills/flashlight/SKILL.md)** — Shine a light into a wayfinder map's fog: work one direction now, out of frontier order, or redraw the map itself. Needs an existing wayfinder map. External dependencies: `/grilling`, `/domain-modeling`, `/research`, `/prototype`.
 - **[grill-design](./skills/grill-design/SKILL.md)** — Converge on a frontend look through rounds of prototypes and grilling verdicts. External dependencies: `/grilling`, `/prototype`. _(previously `grilling-frontend-prototyping`)_
+- **[maintain-agents-md](./skills/maintain-agents-md/SKILL.md)** — Keep a repo's `AGENTS.md` / `CLAUDE.md` lean and current: navigation pointers, no stale paths, no no-op rules. Model-invoked. No external dependencies.
 - **[sandcastle](./skills/sandcastle/SKILL.md)** — Run a sandboxed implement→review loop over a batch of work in its own worktree, ended by an agent-authored PR. External dependencies, mounted at run time: `/implement`, `/tdd`, `/code-review`.
-
+- **[setup-will-ness-skills](./skills/setup-will-ness-skills/SKILL.md)** — Set up a repo for my development workflow: install the workflow skills, write a personalized `DEVELOPMENT_WORKFLOW.md`, tidy `AGENTS.md`, and add the [workflow-status](#mods) pane. Installs its external dependencies itself, from `mattpocock/skills`: `/grill-with-docs`, `/prototype`, `/tdd`, `/pr`, `/to-tickets`, `/to-spec`, `/implement-spec`, `/code-review`, `/codebase-design`, `/retro`, `/grilling`, `/domain-modeling`, `/writing-for-agents`, `/setup-matt-pocock-skills`.
 - **[test-a-skill](./skills/test-a-skill/SKILL.md)** — Field-test a skill by running it cold in parallel agent sessions, then turn what they hit into edits. External dependencies: `/writing-for-agents`.
 
 An **external dependency** is a skill these call but this repo does not contain. Install it separately.
+
+## Mods
+
+- **[workflow-status](./mods/workflow-status)** — A Claude Code pane beside the chat with two boards: which development-workflow skills this session has run, and how ready the repo is for agents (agent file, workflow doc, issue tracker, glossary, installed skills, hooks, CI, coding standards). `/setup-will-ness-skills` enables it per repo; to install it yourself:
+
+  ```text
+  /plugin install workflow-status --marketplace will-ness-ai/skills
+  ```
+
+  In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `will-ness-ai/skills`, then Add plugin. Test it with `claude plugin test mods/workflow-status`.
 
 ## Install
 

@@ -1,4 +1,6 @@
-Each skill is a folder directly under `skills/`, holding a `SKILL.md`. A skill can also carry an `agents/openai.yaml` (Codex metadata) and a `references/` folder for material the `SKILL.md` points to.
+Each skill is a folder directly under `skills/`, holding a `SKILL.md`. A skill can also carry an `agents/openai.yaml` (Codex metadata), a `references/` folder for material the `SKILL.md` points to, and a `scripts/` folder for scripts it runs.
+
+Claude Code mods (plugins of function hooks) live under `mods/`, each listed in `.claude-plugin/marketplace.json`. Check one with `claude plugin validate mods/<name>` and `claude plugin test mods/<name>`.
 
 Some skills call skills that this repo does not contain — for example `/grilling` or `/prototype`. The `README.md` skill index names each skill's external dependencies. Install those separately.
 
