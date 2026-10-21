@@ -53,7 +53,7 @@ Done when `docs/agents/issue-tracker.md` and `docs/agents/domain.md` exist.
 
 ### 5. Write the workflow doc
 
-Copy `<skill>/references/DEVELOPMENT_WORKFLOW.md` to `docs/agents/DEVELOPMENT_WORKFLOW.md` and fill it from the repo facts:
+Copy `<skill>/references/DEVELOPMENT_WORKFLOW.md` to `docs/agents/DEVELOPMENT_WORKFLOW.md` and fill it from the repo facts. Write commands, branches, and paths in backticks; write unknowns as plain words.
 
 | Placeholder | Fill with | When unknown |
 | --- | --- | --- |

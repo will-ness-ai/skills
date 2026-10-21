@@ -37,8 +37,8 @@ idea
 4. **Build.**
    - Multi-session: `/implement-spec` works the ticket graph in parallel worktrees on one integration branch.
    - Small: build in this session with `/tdd`, one red-green slice at a time, at seams agreed before the first test.
-   - Feedback loop: `{{TYPECHECK_COMMAND}}` often, `{{TEST_SINGLE_COMMAND}}` per slice, `{{TEST_COMMAND}}` once at the end.
-5. **Review** — `/code-review` against `{{DEFAULT_BRANCH}}`: Standards (against {{STANDARDS_PATH}}) and Spec (against the ticket or spec), in parallel.
+   - Feedback loop: {{TYPECHECK_COMMAND}} often, {{TEST_SINGLE_COMMAND}} per slice, {{TEST_COMMAND}} once at the end.
+5. **Review** — `/code-review` against {{DEFAULT_BRANCH}}: Standards against {{STANDARDS_PATH}}, and Spec against the ticket or spec, in parallel.
 6. **Ship** — `/pr` writes the body: the smallest visual of the change, before/after evidence, and a one-way or two-way door call. {{PR_CONVENTIONS}}
 7. **Retro** — `/retro`, in the same session, before you clear. It turns this session's friction into environment changes: mechanical mistakes become checks in {{CHECK_LOCATION}}, judgement calls become coding standards, missing pointers go in `AGENTS.md` (via `maintain-agents-md`).
 
@@ -46,14 +46,14 @@ idea
 
 | What | Where |
 | --- | --- |
-| Agent instructions | `{{AGENTS_FILE}}` (kept lean by `maintain-agents-md`) |
+| Agent instructions | {{AGENTS_FILE}} (kept lean by `maintain-agents-md`) |
 | Issue tracker | {{ISSUE_TRACKER}} — see `docs/agents/issue-tracker.md` |
 | Domain glossary | {{GLOSSARY_PATH}} |
 | ADRs | {{ADR_PATH}} |
 | Coding standards | {{STANDARDS_PATH}} |
-| Typecheck / test / lint | `{{TYPECHECK_COMMAND}}` · `{{TEST_COMMAND}}` · `{{LINT_COMMAND}}` |
+| Typecheck / test / lint | {{TYPECHECK_COMMAND}} · {{TEST_COMMAND}} · {{LINT_COMMAND}} |
 | CI | {{CI_PATH}} |
-| Default branch | `{{DEFAULT_BRANCH}}` |
+| Default branch | {{DEFAULT_BRANCH}} |
 
 ## Keeping this current
 
