@@ -1,0 +1,7 @@
+{
+  "name": "workflow-status",
+  "version": "0.1.0",
+  "description": "A pane beside the chat: which development-workflow skills this session has run, and how ready the repo is for agents.",
+  "author": { "name": "Will Ness" },
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,6 @@
+{
+  "extraKnownMarketplaces": {
+    "will-ness-skills": { "source": { "source": "github", "repo": "will-ness-ai/skills" } }
+  },
+  "enabledPlugins": { "workflow-status@will-ness-skills": true }
+}

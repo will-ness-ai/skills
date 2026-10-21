@@ -1,0 +1,21 @@
+{
+  "installedAt": "2026-10-21T03:51:15Z",
+  "skills": [
+    {"name":"grill-with-docs","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"prototype","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"tdd","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"pr","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"to-tickets","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"to-spec","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"implement-spec","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"code-review","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"codebase-design","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"retro","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"grilling","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"domain-modeling","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"writing-for-agents","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"setup-matt-pocock-skills","repo":"mattpocock/skills","commit":"5beb35b040e3de97e54fa9e386d7e42d15c295c2"},
+    {"name":"grill-design","repo":"will-ness-ai/skills","commit":"ae2c376237ee45f6a6fcaea2872970cf65aee1d1"},
+    {"name":"maintain-agents-md","repo":"will-ness-ai/skills","commit":"ae2c376237ee45f6a6fcaea2872970cf65aee1d1"}
+  ]
+}
