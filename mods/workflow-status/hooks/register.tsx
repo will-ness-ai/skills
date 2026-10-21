@@ -179,7 +179,9 @@ export const register: Register = on => {
     })
     await refresh($)
     $.clock.every(60_000, () => void refresh($))
-    if (e.surface === 'desktop') void openPane($)
+    // Beside the chat in the apps, which draw a pane as a sidebar; in a
+    // terminal it would open inline, so there it waits for /workflow-status.
+    if (e.surface !== 'terminal') void openPane($)
 
     return next(e)
   })
