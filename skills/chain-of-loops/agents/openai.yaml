@@ -1,0 +1,5 @@
+interface:
+  display_name: "Chain of Loops"
+  short_description: "Run a task as a chain of tight do-check loops, research to merged PR"
+policy:
+  allow_implicit_invocation: false
