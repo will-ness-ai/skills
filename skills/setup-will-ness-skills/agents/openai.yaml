@@ -1,0 +1,5 @@
+interface:
+  display_name: "Setup Will Ness Skills"
+  short_description: "Install the development-workflow skills, doc, and status pane into a repo"
+policy:
+  allow_implicit_invocation: false

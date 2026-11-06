@@ -1,0 +1,11 @@
+{
+  "name": "will-ness-skills",
+  "owner": { "name": "Will Ness" },
+  "plugins": [
+    {
+      "name": "workflow-status",
+      "source": "./mods/workflow-status",
+      "description": "Status pane: workflow skills run this session, and the repo's agent readiness."
+    }
+  ]
+}

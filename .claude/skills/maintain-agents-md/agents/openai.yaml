@@ -1,0 +1,3 @@
+interface:
+  display_name: "Maintain AGENTS.md"
+  short_description: "Keep AGENTS.md lean, current, and pointing at the right docs"
