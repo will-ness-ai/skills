@@ -5,9 +5,9 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 ## Skills
 
 - **[agent-tools](./skills/agent-tools/SKILL.md)** — Build commands for agents in AXI style: one call runs a chain of tool calls and prints only what the agent uses next. Model-invoked. External dependencies: `/writing-for-agents`.
-- **[chain-of-loops](./skills/chain-of-loops/SKILL.md)** — Run a task as a chain of tight do-check loops, from research through alignment, proof, implementation, checks, and review to a merged PR. No external dependencies.
 - **[cmux](./skills/cmux/SKILL.md)** — Drive the local cmux app: workspaces, panes, surfaces, terminal input, agent sessions, and browser surfaces. Needs cmux.app and its bundled `cmux` CLI on `PATH`. No external dependencies.
 - **[code-story](./skills/code-story/SKILL.md)** — Build a wizard-style HTML page that teaches how and why a change works, one chapter at a time. No external dependencies.
+- **[development-workflow](./skills/development-workflow/SKILL.md)** — Take a task from idea to merged PR through my development workflow, run as a chain of tight do-check loops: research, alignment, proof, spec, tickets, implement, review, PR. External dependencies: `/grilling`, `/prototype`, `/to-spec`, `/to-tickets`, `/implement-spec`, `/tdd`, `/code-review`, `/pr`.
 - **[find-standards](./skills/find-standards/SKILL.md)** — Fan out subagents to find how your problem is already solved: standards you could adopt, and the industry's best practices. External dependencies: `/research`, `/writing-for-agents`.
 - **[flashlight](./skills/flashlight/SKILL.md)** — Shine a light into a wayfinder map's fog: work one direction now, out of frontier order, or redraw the map itself. Needs an existing wayfinder map. External dependencies: `/grilling`, `/domain-modeling`, `/research`, `/prototype`.
 - **[grill-design](./skills/grill-design/SKILL.md)** — Converge on a frontend look through rounds of prototypes and grilling verdicts. External dependencies: `/grilling`, `/prototype`. _(previously `grilling-frontend-prototyping`)_

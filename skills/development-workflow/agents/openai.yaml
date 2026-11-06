@@ -1,0 +1,5 @@
+interface:
+  display_name: "Development Workflow"
+  short_description: "Take a task from idea to merged PR as a chain of tight loops"
+policy:
+  allow_implicit_invocation: false
