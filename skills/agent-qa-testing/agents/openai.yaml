@@ -1,0 +1,4 @@
+interface:
+  display_name: "agent-qa testing"
+  short_description: "Validate and triage agent-qa regression tests"
+  default_prompt: "Use $agent-qa-testing to validate selected tests and inspect agent-qa run evidence."
