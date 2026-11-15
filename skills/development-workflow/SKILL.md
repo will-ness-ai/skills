@@ -68,11 +68,11 @@ When a later loop exposes a mistake from an earlier one, go back to the loop tha
 
 ## 7. Review
 
-**Do**: invoke the Skill tool for `code-review` on the diff, so reviewer subagents check it against the repo's standards and the spec. Fix the real issues they find.
-**Check**: the reviewers' findings. Fresh eyes on the diff catch what the author's context hides, and the subagents keep the main context small.
-**Context**: the diff, the review standards, and the spec.
+**Do**: invoke the Skill tool for `code-review` on the diff, so reviewer subagents check it against the repo's standards and the spec. Fix the real issues they find. Then, when the diff adds a module or changes a module's interface, invoke the Skill tool for `codebase-design` and judge each of those modules by it: depth, the deletion test, and whether each seam is real. This pass comes second, so it judges code that already does the right thing. A diff that stays inside one module's implementation has no interface to judge, so it skips this pass.
+**Check**: the reviewers' findings, then the design pass's verdict on each module. Fresh eyes on the diff catch what the author's context hides, and the subagents keep the main context small.
+**Context**: the diff, the review standards, the spec, and the interfaces of the modules the diff touches.
 
-**Done when** a review pass finds no real issues. A design problem routes back to implement.
+**Done when** a review pass finds no real issues, and the design pass finds no design problem the diff introduced. A design problem routes back to implement.
 
 ## 8. PR
 
