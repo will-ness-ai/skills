@@ -1,6 +1,6 @@
 # The starter kit
 
-`references/starter/` is copied into a new course folder. It needs what `animatic` needs (Node 18+, ffmpeg, and animatic's own first-run installs) and nothing else.
+`references/starter/` is copied into a new course folder. It needs Node 18+ and ffmpeg; the engine ([`engine/`](engine/README.md)) installs Playwright and Shiki itself on the first build.
 
 ```
 <course>/
@@ -8,7 +8,7 @@
   research.md            sources, what each settles, Gaps
   README.md              lessons made, the frontier as offered
   assets/                map.js, map.css   the map component
-                         frames.css        layered over animatic's kit for generated frames
+                         frames.css        layered over the engine's kit for generated frames
                          lesson.css        the lesson pages' stylesheet
   tools/lesson.mjs       the build
   lessons/NNNN-<slug>/
@@ -22,13 +22,13 @@ Everything in `assets/` and `tools/` is the course's to change. A flaw the scree
 ## The build
 
 ```
-ANIMATIC=<animatic>/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> [animatic flags]
+ANIMATIC=<engine>/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> [animatic flags]
 ```
 
-Flags after the folder go to animatic's `build` unchanged: the voice flags from its step 1, `--target 90`. The build writes, in the lesson folder:
+Flags after the folder go to the engine's `build` unchanged: the voice flags, `--target 90`. The build writes, in the lesson folder:
 
 - `storyboard.json` and `frames/` (generated: edit `storyboard.src.json`, never these)
-- `build/` (animatic's cache: `NN.png` per moment, `timeline.json`, `nocap.mp4`, the clean video)
+- `build/` (the engine's cache: `NN.png` per moment, `timeline.json`, `nocap.mp4`, the clean video)
 - `sheet.png`, `animatic.mp4` (captions burned in), `captions.vtt`, `timeline.json`, `index.html`
 
 Single steps: `lesson.mjs expand|captions <lesson>`, and `lesson.mjs page [<lesson>]` (no folder: every page, from the course folder).
@@ -61,7 +61,7 @@ Videos are a few megabytes each. Where the project keeps binaries out of git, ig
 }
 ```
 
-A moment is an animatic storyboard entry (`frame`, `html`, `image`, or none for a Reveal; FRAMES.md) with two additions: `text` (LESSON.md, "Two texts per moment") and `map`. A lesson with no map moments can be a plain array of moments.
+A moment is an engine storyboard entry (`frame`, `html`, `image`, or none for a Reveal; [`FRAMES.md`](engine/FRAMES.md)) with two additions: `text` (LESSON.md, "Two texts per moment") and `map`. A lesson with no map moments can be a plain array of moments.
 
 ## The map
 
@@ -94,7 +94,7 @@ A moment's `map` is one **change**:
 
 Change one thing per moment: that is what makes a map moment a Reveal.
 
-animatic counts each map moment as a Cut, since each is its own page. Count Cuts for its pacing rules by hand: consecutive map moments are one Cut and its Reveals.
+The engine counts each map moment as a Cut, since each is its own page. Count Cuts for STYLE.md's pacing rules by hand: consecutive map moments are one Cut and its Reveals.
 
 To look at a state by hand, open `assets/map.html?s=<url-encoded state>` or any `frames/NN.html`.
 

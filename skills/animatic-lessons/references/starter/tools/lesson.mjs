@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // tools/lesson.mjs: build one lesson of a course of animatics.
 //
-//   ANIMATIC=<animatic skill>/scripts/animatic.mjs \
-//   node tools/lesson.mjs build <lesson-folder> [animatic flags, e.g. --target 90 --engine kokoro]
+//   ANIMATIC=<animatic-lessons skill>/references/engine/scripts/animatic.mjs \
+//   node tools/lesson.mjs build <lesson-folder> [engine flags, e.g. --target 90 --engine kokoro]
 //
 // build runs four steps; each is also a verb of its own:
 //   expand    storyboard.src.json -> storyboard.json + frames/NN.html (one stub per map moment)
@@ -79,7 +79,7 @@ function expand(dir) {
 
 function animatic(dir) {
   const script = process.env.ANIMATIC;
-  if (!script || !fs.existsSync(script)) die("set ANIMATIC to the animatic skill's scripts/animatic.mjs");
+  if (!script || !fs.existsSync(script)) die("set ANIMATIC to the animatic-lessons skill's references/engine/scripts/animatic.mjs");
   const assets = path.resolve(dir, "../../assets");
   // Map frames link the kit's stylesheet from assets/, so keep a copy there.
   fs.copyFileSync(path.resolve(path.dirname(script), "../kit/house.css"), path.join(assets, "house.css"));

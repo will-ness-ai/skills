@@ -7,7 +7,9 @@ argument-hint: "What would you like to learn about?"
 
 `/animatic-lessons <topic>` teaches a topic as a **course**: a run of **lessons**, each one a 60 to 90 second animatic with captions and a lesson page. You make the first few, the user picks what comes next from the **frontier**, and the loop repeats.
 
-It builds every video with the `animatic` skill. Load it now and read its `STYLE.md` and `FRAMES.md`: its words (**moment**, **Cut**, **Reveal**, **lit**) are used here as it defines them. Its step 1 gives you the voice flags for this machine. Below, `<animatic>` is that skill's folder and `<skill>` is this one's.
+Every video is an **animatic**, built by the engine in [`references/engine/`](references/engine/). Read its [`STYLE.md`](references/engine/STYLE.md) and [`FRAMES.md`](references/engine/FRAMES.md) now: their words (**moment**, **Cut**, **Reveal**, **lit**) are used here as they define them. Below, `<skill>` is this skill's folder and `<engine>` is `<skill>/references/engine`.
+
+**The voice.** With no flag, the engine speaks in the machine's built-in voice, and in Kokoro, a local model, where there is none. A voice the user names, or one the repo records in `docs/agents/animatic.md` under **Flags**, wins: [`VOICE.md`](references/engine/VOICE.md) has each engine's flag and how to test it. The **voice flags** you settle on go on every build.
 
 ## 1. Place the course
 
@@ -66,13 +68,13 @@ Read [`LESSON.md`](references/LESSON.md) before you write: it holds what a lesso
 1. Write `lessons/NNNN-<slug>/storyboard.src.json` and `lesson.json`.
 2. Build:
    ```
-   ANIMATIC=<animatic>/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> <voice flags>
+   ANIMATIC=<engine>/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> <voice flags>
    ```
-   It expands the map moments, runs animatic's `build` (plan gate, frames, voice, video, sheet), burns in captions and writes every lesson page. Fix what it prints and rebuild until it ends with `no warnings`.
+   It expands the map moments, runs the engine's `build` (plan gate, frames, voice, video, sheet), burns in captions and writes every lesson page. Fix what it prints and rebuild until it ends with `no warnings`.
 3. Run both loops in [`LOOPS.md`](references/LOOPS.md): the **screenshot loop**, then the **learner loop**. Each finds what the other cannot.
 
 Done when the build ends with `no warnings`, a screenshot pass finds nothing left to fix, and every point the learner raised is fixed or answered with the source that settles it.
 
 ---
 
-Built on Matt Pocock's [`teach`](https://github.com/mattpocock/skills/tree/main/skills/productivity/teach) and `animatic` skills from [mattpocock/skills](https://github.com/mattpocock/skills).
+Built on Matt Pocock's [`teach`](https://github.com/mattpocock/skills/tree/main/skills/productivity/teach) and `animatic` skills from [mattpocock/skills](https://github.com/mattpocock/skills). The engine is his `animatic`, vendored: see [`references/engine/README.md`](references/engine/README.md).

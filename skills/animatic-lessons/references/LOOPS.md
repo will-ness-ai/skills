@@ -4,7 +4,7 @@ Run both on every lesson, in this order. The screenshot loop judges each frame a
 
 ## Screenshot loop
 
-After a clean build, open **every** frame at full size (`build/NN.png`), with its line beside it. animatic's sheet is for pacing; it is too small for this.
+After a clean build, open **every** frame at full size (`build/NN.png`), with its line beside it. The sheet is for pacing; it is too small for this.
 
 Write one line per frame in `critique.md` under `## Pass 1`: the flaw, or `ok`. Be a critic. For each frame ask:
 
