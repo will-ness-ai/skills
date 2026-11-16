@@ -1,0 +1,36 @@
+{
+  "title": "Exit nodes: leave from home, wherever you are",
+  "lede": "By default Tailscale carries only tailnet traffic. An exit node carries the rest of your internet traffic too, so it arrives from that device's address.",
+  "pretest": "Your staging admin panel only accepts connections from your home IP address. You're on café Wi-Fi. How do you get in, without touching the allowlist?",
+  "pretestAnswer": "Make a device at home (the dev box) an exit node and choose it on your laptop. Your public internet traffic then goes through the tunnel to the dev box and leaves from your home network, so the panel sees your home IP. Without an exit node, Tailscale only routes traffic between your own devices, and the request leaves through the café.",
+  "remember": "Tailscale normally carries only tailnet traffic. Choose an exit node, and everything else goes through it.",
+  "questions": [
+    {
+      "q": "What is an exit node, and how is it different from a subnet router?",
+      "a": "An exit node is a device on your tailnet that carries all of your public internet traffic, so it leaves from that device's network. A subnet router reaches one private network; an exit node reaches everything else. [Exit nodes]"
+    },
+    {
+      "q": "List the three steps to use your dev box as an exit node from your laptop, and how you would check it worked.",
+      "a": "1. On the dev box (IP forwarding on): `sudo tailscale set --advertise-exit-node`. 2. Approve it: admin console, Machines page, Edit exit node, Use as exit node. 3. On the laptop: `sudo tailscale set --exit-node=dev-box`. Check: ask a what's-my-IP service before and after; it should change from the café's address to your home address. To stop: `sudo tailscale set --exit-node=`. [Exit nodes; Tailscale CLI]"
+    },
+    {
+      "q": "With the exit node on, you can no longer reach a printer on the café's own network. Why, and which flag fixes it?",
+      "a": "While an exit node is in use, the device loses access to its local network by default. `--exit-node-allow-lan-access` (`=true`) lets the laptop reach its own LAN while it uses the exit node. [Exit nodes; Tailscale CLI]"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Exit nodes (Tailscale docs)",
+      "url": "https://tailscale.com/docs/features/exit-nodes"
+    },
+    {
+      "title": "Tailscale CLI reference (Tailscale docs)",
+      "url": "https://tailscale.com/docs/reference/tailscale-cli"
+    },
+    {
+      "title": "Subnet routers (Tailscale docs)",
+      "url": "https://tailscale.com/docs/features/subnet-routers"
+    }
+  ],
+  "note": "The allowlisted admin panel is this course's example; the docs' own reasons are untrusted café Wi-Fi and services only available from your home country. `curl ifconfig.me` and both addresses are illustrative: the docs say only to check your public IP with an online tool, and that the exit node's address should show. `--exit-node=dev-box` uses the CLI reference's `--exit-node=<ip|name>` form with our machine name; the exit-nodes page uses the Tailscale IP, which `tailscale status` lists. Questions the docs answer: yes, a Linux exit node needs IP forwarding enabled first (`net.ipv4.ip_forward = 1` and `net.ipv6.conf.all.forwarding = 1` in `/etc/sysctl.d/99-tailscale.conf`, then `sudo sysctl -p` on that file), the same as lesson 6's subnet router; on a Mac or phone you pick the exit node from the Exit Node list in the Tailscale client and choose None to stop; approval is on the Machines page and needs an Admin; with your own policy, using an exit node needs a grant whose `dst` is `autogroup:internet`. One the docs do not state outright: whether traffic to your own tailnet devices detours. They say an exit node captures traffic “that isn't already directed to a subnet router or app connector” and that it routes public internet traffic, which implies tailnet traffic keeps its own path."
+}

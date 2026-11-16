@@ -1,0 +1,6 @@
+/* Layered over the kit for generated terminal frames (animatic --css).
+   The kit draws the lit line's accent bar on top of the first character;
+   this moves the bar and plate out into the left margin. */
+.terminal.gen .here {
+  box-shadow: -14px 0 0 var(--window-raised), -18px 0 0 var(--accent);
+}

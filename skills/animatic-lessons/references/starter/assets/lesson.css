@@ -1,0 +1,25 @@
+:root{--bg:#fbfaf7;--fg:#1f1d1a;--muted:#6b665e;--rule:#e2ddd3;--accent:#2f5bd3;--card:#f3f0e9;--code:#efebe2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141414;--fg:#e9e6df;--muted:#9a958c;--rule:#2c2a27;--accent:#8fb0ff;--card:#1d1c1a;--code:#24221f}}
+:root[data-theme="dark"]{--bg:#141414;--fg:#e9e6df;--muted:#9a958c;--rule:#2c2a27;--accent:#8fb0ff;--card:#1d1c1a;--code:#24221f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.6 Georgia,"Iowan Old Style","Palatino Linotype",serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 80px}
+a{color:var(--accent)}
+.kicker{font:600 12px/1.4 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:2.1rem;line-height:1.15;margin:.3em 0 .4em}
+h2{font-size:1.25rem;margin:2.2em 0 .6em;padding-top:.6em;border-top:1px solid var(--rule)}
+.lede{font-size:1.15rem;color:var(--muted)}
+video{width:100%;border-radius:8px;background:#000;display:block;margin:1.4em 0 .4em}
+.meta{font:14px/1.4 system-ui,sans-serif;color:var(--muted)}
+.remember{background:var(--card);border-left:4px solid var(--accent);padding:14px 18px;margin:1.6em 0;border-radius:4px}
+.pretest{background:var(--card);padding:14px 18px;border-radius:4px}
+ol.transcript{padding-left:1.6em}ol.transcript li{margin:.35em 0}ol.transcript li.cut{margin-top:1em}
+code{font:15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:3px}
+details{border:1px solid var(--rule);border-radius:6px;padding:10px 16px;margin:.8em 0}
+summary{cursor:pointer;font-weight:600}
+.q{margin:1em 0 .3em;font-weight:600}
+nav.series{font:15px/1.6 system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:2.4em;padding-top:1em;border-top:1px solid var(--rule)}
+.ask{font-style:italic;color:var(--muted)}
+dl dt{font-weight:700;margin-top:1em}dl dd{margin:.2em 0 0 0}
+.avoid,.status{font:14px/1.4 system-ui,sans-serif;color:var(--muted)}
+@media print{video,nav.series{display:none}details{border:none}details>*{display:block}}

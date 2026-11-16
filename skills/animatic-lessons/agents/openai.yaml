@@ -1,0 +1,5 @@
+interface:
+  display_name: "Animatic Lessons"
+  short_description: "Learn a topic through short narrated videos you steer"
+policy:
+  allow_implicit_invocation: false

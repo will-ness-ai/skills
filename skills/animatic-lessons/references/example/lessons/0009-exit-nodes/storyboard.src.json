@@ -1,0 +1,165 @@
+{
+  "scene": {
+    "title": "Your tailnet",
+    "add": {
+      "nodes": [
+        {
+          "id": "web",
+          "col": 4,
+          "row": 2,
+          "title": "staging admin",
+          "sub": "allows home IP only"
+        }
+      ],
+      "edges": [
+        {
+          "id": "web-direct",
+          "from": "laptop",
+          "to": "web",
+          "arrows": "end",
+          "label": "from the café's IP",
+          "state": "blocked"
+        },
+        {
+          "id": "direct",
+          "group": "exit"
+        },
+        {
+          "id": "exit-b",
+          "from": "devbox",
+          "to": "web",
+          "arrows": "end",
+          "label": "as your home IP",
+          "group": "exit"
+        }
+      ]
+    },
+    "show": [
+      "coord",
+      "laptop",
+      "devbox",
+      "derp",
+      "cafe",
+      "home",
+      "ctl-laptop",
+      "ctl-devbox",
+      "direct",
+      "web",
+      "web-direct"
+    ]
+  },
+  "moments": [
+    {
+      "say": "Guess first. Your staging admin panel only accepts connections from your home I P address. You're on café Wi-Fi. How do you get in, without touching the allowlist?",
+      "text": "Guess first. Your staging admin panel only accepts connections from your home IP address. You're on café Wi-Fi. How do you get in, without touching the allowlist?",
+      "frame": {
+        "type": "title",
+        "kicker": "Tailscale · Lesson 9 · Guess first",
+        "headline": "The allowlist says\nhome IP only",
+        "sub": "You're at a café. How do you get in?"
+      }
+    },
+    {
+      "say": "Tailscale only carries traffic between your own devices. A request to the admin panel still leaves through the café's network, from the café's address, and is refused.",
+      "map": {
+        "lit": "web-direct"
+      }
+    },
+    {
+      "say": "An exit node is a device on your tailnet that carries all your public internet traffic. A subnet router reaches one private network; an exit node reaches everything else. Make the dev box one.",
+      "map": {
+        "set": {
+          "devbox": {
+            "sub": "exit node"
+          }
+        },
+        "lit": "devbox"
+      }
+    },
+    {
+      "say": "Now the request travels encrypted to the dev box, and leaves from your home network. The panel sees your home address, and lets you in.",
+      "map": {
+        "hide": [
+          "web-direct"
+        ],
+        "show": [
+          "exit-b"
+        ],
+        "set": {
+          "direct": {
+            "label": "encrypted"
+          }
+        },
+        "lit": "exit"
+      }
+    },
+    {
+      "say": "Three steps. On the dev box, turn on I P forwarding, as for a subnet router, then offer it: tailscale set, dash dash advertise exit node.",
+      "text": "Three steps. On the dev box, turn on IP forwarding, as for a subnet router, then offer it: `tailscale set --advertise-exit-node`.",
+      "frame": {
+        "type": "terminal",
+        "title": "dev-box",
+        "lines": [
+          "$ sudo tailscale set --advertise-exit-node",
+          {
+            "text": "# admin console > Machines > Edit exit node > Use as exit node",
+            "tone": "warn"
+          }
+        ],
+        "show": 1,
+        "lit": 1
+      }
+    },
+    {
+      "say": "Then approve it: in the admin console, on the Machines page, edit exit node, then use as exit node.",
+      "text": "Then approve it: in the admin console, on the Machines page, “Edit exit node”, then “Use as exit node”.",
+      "show": 2,
+      "lit": 2
+    },
+    {
+      "say": "On your laptop, a what's my I P service shows the café's address. Choose the exit node: dash dash exit node equals dev box.",
+      "text": "On your laptop, a what's-my-IP service shows the café's address. Choose the exit node: --exit-node=dev-box.",
+      "frame": {
+        "type": "terminal",
+        "title": "your laptop, on café Wi-Fi",
+        "lines": [
+          "$ curl ifconfig.me",
+          "198.51.100.24",
+          "$ sudo tailscale set --exit-node=dev-box",
+          "$ curl ifconfig.me",
+          "203.0.113.7",
+          "$ sudo tailscale set --exit-node=dev-box --exit-node-allow-lan-access=true",
+          "$ sudo tailscale set --exit-node="
+        ],
+        "show": 3,
+        "lit": 3
+      }
+    },
+    {
+      "say": "Ask again: your home address.",
+      "show": 5,
+      "lit": 5
+    },
+    {
+      "say": "One caveat: while it's on, devices on the café's own network are out of reach, unless you add dash dash exit node allow LAN access.",
+      "text": "One caveat: while it's on, devices on the café's own network are out of reach, unless you add --exit-node-allow-lan-access.",
+      "show": 6,
+      "lit": 6
+    },
+    {
+      "say": "To stop, set exit node to nothing.",
+      "text": "To stop, set --exit-node= to nothing.",
+      "show": 7,
+      "lit": 7
+    },
+    {
+      "say": "Remember: Tailscale normally carries only tailnet traffic. Choose an exit node, and everything else goes through it.",
+      "frame": {
+        "type": "title",
+        "kicker": "Remember",
+        "headline": "An exit node carries\nyour internet traffic",
+        "sub": "Advertise, approve, then choose it"
+      }
+    }
+  ]
+}

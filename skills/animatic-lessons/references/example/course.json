@@ -1,0 +1,144 @@
+{
+  "title": "Tailscale",
+  "map": {
+    "grid": {
+      "cols": [
+        230,
+        595,
+        960,
+        1325,
+        1690
+      ],
+      "rows": [
+        200,
+        500,
+        800
+      ]
+    },
+    "nodes": [
+      {
+        "id": "coord",
+        "col": 2,
+        "row": 0,
+        "title": "coordination server",
+        "sub": "keys + policy"
+      },
+      {
+        "id": "laptop",
+        "col": 0,
+        "row": 1,
+        "title": "your laptop"
+      },
+      {
+        "id": "devbox",
+        "col": 4,
+        "row": 1,
+        "title": "dev box"
+      },
+      {
+        "id": "derp",
+        "col": 2,
+        "row": 2,
+        "title": "DERP relay"
+      },
+      {
+        "id": "sandbox",
+        "col": 1,
+        "row": 2,
+        "title": "agent sandbox",
+        "sub": "tag:server"
+      }
+    ],
+    "zones": [
+      {
+        "id": "cafe",
+        "label": "café Wi-Fi",
+        "from": [
+          0,
+          1
+        ],
+        "to": [
+          0,
+          1
+        ]
+      },
+      {
+        "id": "home",
+        "label": "home network",
+        "from": [
+          4,
+          1
+        ],
+        "to": [
+          4,
+          1
+        ]
+      },
+      {
+        "id": "cloud",
+        "label": "cloud",
+        "from": [
+          1,
+          2
+        ],
+        "to": [
+          1,
+          2
+        ],
+        "align": "right"
+      }
+    ],
+    "edges": [
+      {
+        "id": "ctl-laptop",
+        "from": "laptop",
+        "to": "coord",
+        "style": "dashed",
+        "arrows": "none",
+        "group": "control"
+      },
+      {
+        "id": "ctl-devbox",
+        "from": "devbox",
+        "to": "coord",
+        "style": "dashed",
+        "arrows": "none",
+        "group": "control"
+      },
+      {
+        "id": "direct",
+        "from": "laptop",
+        "to": "devbox",
+        "arrows": "both",
+        "label": "WireGuard"
+      },
+      {
+        "id": "relay-a",
+        "from": "laptop",
+        "to": "derp",
+        "style": "dashed",
+        "arrows": "both",
+        "group": "relay"
+      },
+      {
+        "id": "relay-b",
+        "from": "derp",
+        "to": "devbox",
+        "style": "dashed",
+        "arrows": "both",
+        "group": "relay"
+      }
+    ],
+    "show": [
+      "coord",
+      "laptop",
+      "devbox",
+      "derp",
+      "cafe",
+      "home",
+      "ctl-laptop",
+      "ctl-devbox",
+      "direct"
+    ]
+  }
+}
