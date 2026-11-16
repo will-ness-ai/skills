@@ -1,0 +1,31 @@
+/* The map: one shared picture of the course's world, drawn on the animatic kit's
+ * house.css (copied into assets/ at build). Colours and fonts are house.css variables. */
+.map { position: relative; width: 1920px; height: 1080px; display: block; }
+.map .overline { position: absolute; left: 64px; top: 40px; }
+.map svg { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+.map .node { position: absolute; transform: translate(-50%, -50%); min-width: 250px; padding: 20px 30px; white-space: nowrap; z-index: 2; }
+.map .node .node-title { font-size: 40px; line-height: 1.2; }
+.map .node .node-sub { margin-top: 6px; font-size: 28px; line-height: 1.25; }
+.map .node.muted { opacity: 0.58; }
+.map .node.off { border-style: dashed; opacity: 0.45; }
+.map .node.off .node-title { color: var(--dim); }
+.map .zone { position: absolute; border: 3px dashed #333; border-radius: 20px; z-index: 0; }
+.map .zone span { position: absolute; left: 22px; top: 8px; font-size: 28px; font-style: italic; color: var(--faint); white-space: nowrap; }
+/* A zone's label sits on the side away from the middle, clear of its edges. */
+.map .zone.right span { left: auto; right: 22px; }
+.map .zone.muted { opacity: 0.6; }
+.map .hidden { visibility: hidden; }
+.map .edge line { stroke: #6f6f6f; stroke-width: 5; stroke-linecap: round; }
+.map .edge polygon { fill: #6f6f6f; }
+.map .edge.dashed line { stroke-dasharray: 4 16; }
+.map .edge text { font: italic 28px var(--sans); fill: var(--dim); text-anchor: middle; paint-order: stroke; stroke: var(--ground); stroke-width: 14px; stroke-linejoin: round; }
+.map .edge.muted { opacity: 0.4; }
+.map .edge.lit line { stroke: var(--accent); stroke-width: 7; }
+.map .edge.lit polygon { fill: var(--accent); }
+.map .edge.lit text { fill: var(--accent-soft); }
+.map .edge.blocked line { stroke: var(--error); stroke-dasharray: 18 14; }
+.map .edge.blocked polygon, .map .edge.blocked text { fill: var(--error); }
+.map .edge .cross { stroke: var(--error); stroke-width: 9; stroke-linecap: round; }
+.map .edge.ok line, .map .edge.ok.lit line { stroke: var(--ok); }
+.map .edge.ok polygon, .map .edge.ok text, .map .edge.ok.lit polygon, .map .edge.ok.lit text { fill: var(--ok); }
+.map .node.off.lit { opacity: 0.85; }

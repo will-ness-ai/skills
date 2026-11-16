@@ -5,6 +5,7 @@ My personal agent skills for Claude Code and other Agent-Skills harnesses.
 ## Skills
 
 - **[agent-tools](./skills/agent-tools/SKILL.md)** — Build commands for agents in AXI style: one call runs a chain of tool calls and prints only what the agent uses next. Model-invoked. External dependencies: `/writing-for-agents`.
+- **[animatic-lessons](./skills/animatic-lessons/SKILL.md)** — Learn a topic as a course of short narrated videos with captions: a few intro lessons, then you pick what comes next from the frontier. Ships a starter kit (shared map, captions, lesson pages). Needs Node 18+ and ffmpeg. External dependencies: `/animatic`.
 - **[cmux](./skills/cmux/SKILL.md)** — Drive the local cmux app: workspaces, panes, surfaces, terminal input, agent sessions, and browser surfaces. Needs cmux.app and its bundled `cmux` CLI on `PATH`. No external dependencies.
 - **[code-story](./skills/code-story/SKILL.md)** — Build a wizard-style HTML page that teaches how and why a change works, one chapter at a time. No external dependencies.
 - **[development-workflow](./skills/development-workflow/SKILL.md)** — Take a task from idea to merged PR through my development workflow, run as a chain of tight do-check loops: research, alignment, proof, spec, tickets, implement, review, PR. External dependencies: `/grilling`, `/prototype`, `/to-spec`, `/to-tickets`, `/implement-spec`, `/tdd`, `/code-review`, `/codebase-design`, `/pr`.
@@ -47,7 +48,7 @@ Flags: `--light` for the light theme, `--out FILE` to keep the PNG, `--no-copy` 
 
 ## Origin
 
-Originally forked from [mattpocock/skills](https://github.com/mattpocock/skills). Matt's skills are no longer kept here; install his set separately if you want them.
+Originally forked from [mattpocock/skills](https://github.com/mattpocock/skills). Matt's skills are no longer kept here; install his set separately if you want them. `animatic-lessons` builds on his `teach` and `animatic` skills.
 
 ## License
 
