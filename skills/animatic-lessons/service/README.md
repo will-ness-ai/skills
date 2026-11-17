@@ -18,7 +18,7 @@ Node 22.5+ and nothing else: the queue is `node:sqlite`, the site is `node:http`
 node <skill>/service/bin/lessons.mjs install
 ```
 
-This starts two launchd agents that run at login and restart if they stop (`com.animatic-lessons.site`, `com.animatic-lessons.worker`), and links `lessons` into `~/.local/bin`. `lessons uninstall` removes both and keeps your data.
+This starts two launchd agents that run at login and restart if they stop (`com.animatic-lessons.site`, `com.animatic-lessons.worker`), and links `lessons` into `~/.local/bin`. `lessons uninstall` removes both and keeps your data. `lessons doctor` says whether each thing the service needs is there and running.
 
 Elsewhere, or by hand: `lessons serve` in one terminal, `lessons work` in another.
 
@@ -30,7 +30,7 @@ Elsewhere, or by hand: `lessons serve` in one terminal, `lessons work` in anothe
 ~/.animatic-lessons/
   lessons.db       the queue: requests, their lessons, every event
   library/<course>/  one folder per course, laid out by the skill's starter kit (references/KIT.md)
-  config.json      optional: { "voiceFlags": [...], "agent": [...], "pollSeconds": 5 }
+  config.json      optional: { "voiceFlags": [...], "agent": [...], "pollSeconds": 5, "maxMinutes": 60 }
   logs/            the site, the worker, and each request's raw agent stream
 ```
 
@@ -42,7 +42,7 @@ The library folders are the truth about courses and lessons; the database holds 
 lessons request "How does Tailnet Lock work, and do I need it on a solo tailnet?"
 ```
 
-Run from an agent's working folder, it also records the conversation the request came from: the folder's newest Claude Code transcript and its last user message (`--transcript <path>` and `--message <id>` say so exactly; `--transcript none` records neither). The worker reads around that message to learn what the person was doing and what they did not follow. `--course <slug>` suggests a course to extend. The site's **Request a lesson** button queues one too, without a transcript.
+Run from an agent's working folder, it also records the conversation the request came from: the folder's newest Claude Code transcript and its last user message (`--transcript <path>` and `--message <id>` say so exactly; `--transcript none` records neither). The worker reads around that message to learn what the person was doing and what they did not follow. `--course <slug>` suggests a course to extend. The `request-lesson` skill teaches other agents this command. The site's **Request a lesson** button queues one too, without a transcript.
 
 ## What the worker does
 
@@ -59,7 +59,7 @@ Run from an agent's working folder, it also records the conversation the request
 | `frames` | frames rendered without voice, read at full size, critiqued, fixed, repeated |
 | `render` | the final videos, with voice and captions |
 
-The agent's stream is copied into the queue as it arrives, so the site shows what it says and each tool it calls. One request runs at a time. A request whose agent stops without closing it is marked failed; one a crashed worker held is retried once.
+The agent's stream is copied into the queue as it arrives, so the site shows what it says and each tool it calls. One request runs at a time. A request still running after `maxMinutes` is stopped and marked failed. A request whose agent stops without closing it is marked failed; one a crashed worker held is retried once.
 
 **Permissions.** The agent runs unattended, so it is started with `--permission-mode acceptEdits` and an allowlist that includes `Bash`, `WebFetch` and subagents. It can run any command as you. Change the command in `config.json` (`agent`) to narrow that.
 

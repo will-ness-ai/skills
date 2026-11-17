@@ -10,8 +10,9 @@ import { HOME } from "./db.mjs";
 const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../bin/lessons.mjs");
 const AGENTS = path.join(os.homedir(), "Library/LaunchAgents");
 const BIN = path.join(os.homedir(), ".local/bin");
-const label = (name) => `com.animatic-lessons.${name}`;
-const which = (cmd) => { try { return execFileSync("which", [cmd], { encoding: "utf8" }).trim(); } catch { return null; } };
+export const label = (name) => `com.animatic-lessons.${name}`;
+export const nodeOk = (v = process.versions.node) => { const [a, b] = v.split(".").map(Number); return a > 22 || (a === 22 && b >= 5); };
+export const which = (cmd) => { try { return execFileSync("which", [cmd], { encoding: "utf8" }).trim(); } catch { return null; } };
 const xml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
 export function plist(name, args, { claude = which("claude"), ffmpeg = which("ffmpeg") } = {}) {
@@ -40,6 +41,7 @@ const stop = (name) => spawnSync("launchctl", ["bootout", `${domain()}/${label(n
 
 export function install({ port = 4747 } = {}) {
   mac();
+  if (!nodeOk()) throw new Error(`the queue needs Node 22.5 or later (node:sqlite); this is ${process.version}. Run install with a newer node.`);
   if (!which("claude")) throw new Error("the worker runs `claude`, which is not on PATH. Install Claude Code, then run install again.");
   if (!which("ffmpeg")) throw new Error("the build needs ffmpeg, which is not on PATH (brew install ffmpeg), then run install again.");
   for (const d of [AGENTS, BIN, path.join(HOME, "logs")]) fs.mkdirSync(d, { recursive: true });

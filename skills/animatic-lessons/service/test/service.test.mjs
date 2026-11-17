@@ -77,6 +77,24 @@ test("an agent that closes its request is done", async () => {
   assert.equal(q.get(r.id).summary, "made one lesson");
 });
 
+test("a request that outlives its time limit is stopped and failed", async () => {
+  fs.writeFileSync(path.join(home, "config.json"), JSON.stringify({ maxMinutes: 0.005, agent: [process.execPath, "-e", "setTimeout(() => {}, 60000)"] }));
+  const r = q.add({ request: "never ends" });
+  const started = Date.now();
+  await run(q, q.claim("w"));
+  assert.ok(Date.now() - started < 10_000);
+  assert.equal(q.get(r.id).status, "failed");
+  assert.match(q.get(r.id).summary, /stopped after .* minutes/);
+});
+
+test("doctor names what is missing, and fails when a lesson could not be made", () => {
+  const r = spawnSync(process.execPath, [path.join(SERVICE, "bin/lessons.mjs"), "doctor", "--port", "1"], { encoding: "utf8", env: { LESSONS_HOME: home, PATH: "/nonexistent" } });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /ok\s+node/);
+  assert.match(r.stdout, /FAIL\s+claude\s+not on PATH/);
+  assert.match(r.stdout, /--\s+site\s+nothing answers on port 1/);
+});
+
 test("the command line: request, list, and errors that say what to do", () => {
   const out = cli("request", "how does DERP pick a region", "--transcript", "/tmp/t.jsonl", "--message", "u-42", "--course", "tailscale");
   assert.match(out.stdout, /queued request \d+/);

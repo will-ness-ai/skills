@@ -23,6 +23,7 @@ Run (a person):
   lessons serve [--port 4747]                    the site
   lessons work [--once]                          pop requests, one agent each
   lessons install | uninstall                    macOS: keep both running in the background
+  lessons doctor                                 what the service needs, and whether each is there
   lessons home                                   where the queue and the library live
 
 --transcript auto (the default) finds this folder's newest Claude Code session and its last user message.`;
@@ -78,6 +79,7 @@ try {
     case "home": console.log(`home     ${HOME}\nqueue    ${path.join(HOME, "lessons.db")}\nlibrary  ${LIBRARY}\nconfig   ${path.join(HOME, "config.json")}\nsite     http://localhost:${port()}`); break;
     case "serve": { const { serve } = await import("../lib/server.mjs"); await serve(q, { port: port(), host: flags.host ?? "127.0.0.1" }); console.log(`lessons: http://localhost:${port()}  (library: ${LIBRARY})`); break; }
     case "work": { const { work } = await import("../lib/worker.mjs"); await work(q, { once: Boolean(flags.once) }); break; }
+    case "doctor": { const { doctor } = await import("../lib/doctor.mjs"); process.exitCode = (await doctor({ port: port() })) ? 0 : 1; break; }
     case "install": case "uninstall": { const m = await import("../lib/install.mjs"); m[verb]({ port: port() }); break; }
     default: die(`unknown command "${verb}". Run: lessons help`);
   }

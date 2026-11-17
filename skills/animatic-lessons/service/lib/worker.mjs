@@ -21,6 +21,7 @@ export const config = () => {
       "--allowedTools", "Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch,Agent,Task"],
     voiceFlags: [],
     pollSeconds: 5,
+    maxMinutes: 60, // a request still running after this is stopped and failed
     ...file,
   };
 };
@@ -64,7 +65,11 @@ export function run(q, r, cfg = config()) {
     const raw = fs.createWriteStream(path.join(HOME, "logs", `request-${r.id}.jsonl`), { flags: "a" });
     const dirs = ["--add-dir", SKILL, ...(r.transcript_path && fs.existsSync(r.transcript_path) ? ["--add-dir", path.dirname(r.transcript_path)] : [])];
     // The prompt goes in on stdin: claude's --add-dir and --allowedTools take every argument after them.
-    const child = spawn(cmd, [...args, ...(cmd === "claude" ? dirs : [])], { cwd: LIBRARY, env: { ...process.env, LESSONS_REQUEST: String(r.id) }, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(cmd, [...args, ...(cmd === "claude" ? dirs : [])], { cwd: LIBRARY, env: { ...process.env, LESSONS_REQUEST: String(r.id) }, stdio: ["pipe", "pipe", "pipe"], detached: true });
+    // Its own process group, so stopping it also stops the builds and subagents it started.
+    const stop = (signal) => { try { process.kill(-child.pid, signal); } catch {} };
+    let late = false;
+    const limit = setTimeout(() => { late = true; stop("SIGTERM"); setTimeout(() => stop("SIGKILL"), 5000).unref(); }, cfg.maxMinutes * 60_000);
     child.stdin.on("error", () => {}); // an agent that never reads its prompt
     child.stdin.end(prompt(r, cfg));
     let buf = "", result = null, err = "";
@@ -75,11 +80,12 @@ export function run(q, r, cfg = config()) {
       while ((i = buf.indexOf("\n")) >= 0) { result = record(q, r.id, buf.slice(0, i)) ?? result; buf = buf.slice(i + 1); }
     });
     child.stderr.on("data", (d) => { err = (err + d).slice(-2000); });
-    child.on("error", (e) => { q.finish(r.id, "failed", `could not start the agent (${cmd}): ${e.message}`); resolve(); });
+    child.on("error", (e) => { clearTimeout(limit); q.finish(r.id, "failed", `could not start the agent (${cmd}): ${e.message}`); resolve(); });
     child.on("close", (code) => {
+      clearTimeout(limit);
       raw.end();
       // The agent closes its own request with `lessons done`. One still open is a failure.
-      if (q.get(r.id).status === "working") q.finish(r.id, "failed", code === 0 ? "the agent stopped without finishing the request" : `the agent exited with code ${code}: ${short(err.trim() || result?.result || "no output", 400)}`);
+      if (q.get(r.id).status === "working") q.finish(r.id, "failed", late ? `stopped after ${cfg.maxMinutes} minutes (maxMinutes in config.json). \`lessons requeue ${r.id}\` tries again` : code === 0 ? "the agent stopped without finishing the request" : `the agent exited with code ${code}: ${short(err.trim() || result?.result || "no output", 400)}`);
       resolve();
     });
   });
