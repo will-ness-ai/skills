@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -154,6 +155,8 @@ test("the library reads courses from folders, and the site serves them", async (
     // Another site's page cannot queue work for the agent.
     assert.equal((await post({})).status, 403);
     assert.equal((await post({ ...json, Origin: "https://elsewhere.example" })).status, 403);
+    const rebound = await new Promise((done) => http.request(`${base}/api/requests`, { method: "POST", headers: { ...json, Host: "evil.example:4747", Origin: "http://evil.example:4747" } }, (res) => done(res.statusCode)).end("{}"));
+    assert.equal(rebound, 403);
     assert.equal(q.list("queued").length, 0);
     // Requests that used to stop the site.
     assert.equal((await fetch(`${base}/library/demo/lessons/0001-first/animatic.mp4`, { headers: { Range: "bytes=5-2" } })).status, 416);

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { BEAT, LIBRARY, STAGES } from "./db.mjs";
 import * as library from "./library.mjs";
 
+const LOCAL = ["127.0.0.1", "localhost", "[::1]", "::1"];
 const WEB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../web");
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".png": "image/png", ".mp4": "video/mp4", ".vtt": "text/vtt; charset=utf-8", ".svg": "image/svg+xml", ".md": "text/plain; charset=utf-8" };
 
@@ -38,9 +39,10 @@ export function serve(q, { port = 4747, host = "127.0.0.1" } = {}) {
       if (p === "/api/requests" && req.method === "GET") return send(res, { stages: STAGES, requests: q.list().map(request) });
       if (p === "/api/requests" && req.method === "POST") {
         // A queued request is run by an agent with a shell, so no other site's page may queue one:
-        // a JSON content type forces a preflight on cross-origin posts, and the origin must be this site.
-        const origin = req.headers.origin;
-        if (!/^application\/json\b/.test(req.headers["content-type"] ?? "") || (origin && new URL(origin).host !== req.headers.host)) return send(res, { error: "requests are queued from this site or the lessons command" }, 403);
+        // a JSON content type forces a preflight on cross-origin posts, the origin must be this site, and on
+        // a local-only site the name it was reached by must be local (another name is a DNS-rebinding page).
+        const origin = req.headers.origin, name = new URL(`http://${req.headers.host}`).hostname;
+        if (!/^application\/json\b/.test(req.headers["content-type"] ?? "") || (origin && new URL(origin).host !== req.headers.host) || (LOCAL.includes(host) && !LOCAL.includes(name))) return send(res, { error: "requests are queued from this site or the lessons command" }, 403);
         let body = ""; for await (const c of req) body += c;
         return send(res, q.add({ request: JSON.parse(body || "{}").request, cwd: "site" }), 201);
       }

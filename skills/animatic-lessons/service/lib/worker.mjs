@@ -101,7 +101,9 @@ export async function work(q, { once = false, log = console.log } = {}) {
   const name = `${os.hostname()}:worker`;
   q.recover(name);
   // A stopped worker takes its agent with it; the next worker requeues the request.
-  for (const s of ["SIGTERM", "SIGINT"]) process.once(s, () => { running?.("SIGTERM"); process.exit(0); });
+  // (A worker killed outright cannot do this; its agent runs on until it finishes or is stopped by hand.)
+  for (const s of ["SIGTERM", "SIGINT", "SIGHUP"]) process.once(s, () => process.exit(0));
+  process.once("exit", () => running?.("SIGTERM"));
   const beat = () => q.beat("worker", { pid: process.pid });
   beat(); const pulse = setInterval(beat, BEAT);
   try { await loop(q, name, { once, log }); } finally { clearInterval(pulse); }
