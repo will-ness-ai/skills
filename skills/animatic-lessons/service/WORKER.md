@@ -15,7 +15,7 @@ You are the lessons worker. One request for a lesson is yours: take it from a se
 - The queue: `{{lessons}}`, written `lessons` below. Report with it as you go:
   - `lessons stage {{id}} <stage> "<note>"` on entering each stage below. The stage names are fixed.
   - `lessons log {{id}} "<one line>"` for a decision or a finding worth a person's glance.
-  - `lessons attach {{id}} <course> [<lesson>]` once the course is chosen, and again for each lesson folder as you create it. The site shows a lesson's script, frames and video from that moment.
+  - `lessons attach {{id}} <course> [<lesson>]` once the course is chosen, and again for each lesson folder as you create it. The site shows a lesson's script, frames and video from that moment. If you later rename, merge or drop a lesson folder, run `lessons detach {{id}} <course> <old-folder>` and attach the new one.
 - Voice flags for every build: {{voice_flags}}
 
 ## The stages
@@ -86,7 +86,9 @@ ANIMATIC={{skill}}/references/engine/scripts/animatic.mjs node tools/lesson.mjs 
 
 Fix what the build prints until it ends with `no warnings`. Then update the course `README.md`: the lessons made, each with its one line to remember, and the **Frontier**.
 
-Done when every lesson folder holds `animatic.mp4`, `captions.vtt` and `index.html`.
+The build prints each video's length. A lesson over 90 seconds is too long: cut narration (or split the lesson, if it holds a third idea) and build it again.
+
+Done when every lesson folder holds `animatic.mp4`, `captions.vtt` and `index.html`, and no video runs over 90 seconds.
 
 ## Finishing
 

@@ -97,13 +97,16 @@ function engine(dir, verb) {
 }
 
 const timeline = (dir) => { const t = maybe(path.join(dir, "build/timeline.json"), null) ?? maybe(path.join(dir, "timeline.json"), null); return t ? t.moments ?? t : null; };
-const texts = (dir) => { const s = json(path.join(dir, "storyboard.src.json")); return (Array.isArray(s) ? s : s.moments).map((m) => m.text ?? m.say ?? ""); };
+// A lesson written straight as storyboard.json (no map moments) still gets a page.
+const texts = (dir) => { const src = path.join(dir, "storyboard.src.json"), s = json(fs.existsSync(src) ? src : path.join(dir, "storyboard.json")); return (Array.isArray(s) ? s : s.moments).map((m) => m.text ?? m.say ?? ""); };
 
 function captions(dir) {
   const tl = timeline(dir), lines = texts(dir), clean = path.join(dir, "build/nocap.mp4"), out = path.join(dir, "animatic.mp4");
   if (!tl || !fs.existsSync(clean)) die("no build/nocap.mp4 or build/timeline.json; run build first");
   if (tl.length !== lines.length) die(`timeline has ${tl.length} moments, storyboard.src.json has ${lines.length}; rebuild`);
   // Kept beside the lesson, so the page can be regenerated after build/ is gone.
+  const length = tl[tl.length - 1].start + tl[tl.length - 1].seconds;
+  console.log(`${length > 90 ? "WARN " : ""}length: ${Math.round(length)} s${length > 90 ? " (over the 90 s a lesson gets; cut narration or split it)" : ""}`);
   fs.writeFileSync(path.join(dir, "timeline.json"), JSON.stringify(tl.map(({ n, cut, start, seconds }) => ({ n, cut, start, seconds }))) + "\n");
   const wrap = (s, w = 42) => s.split(/\s+/).reduce((rows, word) => { const last = rows[rows.length - 1]; if (last !== undefined && (last + " " + word).length <= w) rows[rows.length - 1] = last + " " + word; else rows.push(word); return rows; }, []);
   const cues = [];
@@ -161,9 +164,9 @@ ${l.note ? `<p class="meta">${md(l.note)}</p>` : ""}
   console.log(`page: ${slug}/index.html`);
 }
 
-const dirs = (course = ".") => { const root = path.resolve(course, "lessons"); if (!fs.existsSync(root)) die("name a lesson folder, or run from the course folder"); return fs.readdirSync(root).sort().map((s) => path.join(root, s)).filter((d) => fs.existsSync(path.join(d, "lesson.json"))); };
+const dirs = (course = ".") => { const root = path.resolve(course, "lessons"); if (!fs.existsSync(root)) die("name a lesson folder, or run from the course folder"); return fs.readdirSync(root).sort().map((s) => path.join(root, s)).filter((d) => fs.existsSync(path.join(d, "lesson.json")) && ["storyboard.src.json", "storyboard.json"].some((f) => fs.existsSync(path.join(d, f)))); };
 const dir = lessonArg ? path.resolve(lessonArg) : null;
-if (dir && !fs.existsSync(path.join(dir, "storyboard.src.json"))) die(`${lessonArg}: no storyboard.src.json`);
+if (dir && verb !== "page" && !fs.existsSync(path.join(dir, "storyboard.src.json"))) die(`${lessonArg}: no storyboard.src.json`);
 if (verb === "build" && dir) { expand(dir); engine(dir, "build"); captions(dir); dirs(path.resolve(dir, "../..")).forEach(page); } // every page: the series nav changed
 else if (verb === "expand" && dir) expand(dir);
 else if (verb === "frames" && dir) { expand(dir); engine(dir, "render"); } // frames and sheet only: no voice, no video

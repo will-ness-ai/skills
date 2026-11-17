@@ -84,6 +84,8 @@ export function open(file = path.join(HOME, "lessons.db")) {
       db.prepare("UPDATE requests SET course = ? WHERE id = ?").run(course, id);
       if (lesson) { db.prepare("INSERT OR IGNORE INTO request_lessons VALUES (?, ?, ?)").run(id, course, lesson); event(id, "lesson", `${course}/${lesson}`); }
     },
+    // A lesson folder the agent renamed, merged or dropped.
+    detach(id, course, lesson) { need(id); db.prepare("DELETE FROM request_lessons WHERE request_id = ? AND course = ? AND lesson = ?").run(id, course, lesson); event(id, "log", `dropped ${course}/${lesson}`); },
     finish(id, status, summary = null) {
       need(id);
       db.prepare("UPDATE requests SET status = ?, summary = ?, finished_at = ? WHERE id = ?").run(status, summary, now(), id);

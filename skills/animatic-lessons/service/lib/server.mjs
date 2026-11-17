@@ -28,7 +28,7 @@ function file(req, res, root, rel) {
 
 export function serve(q, { port = 4747, host = "127.0.0.1" } = {}) {
   const send = (res, body, code = 200) => { res.writeHead(code, { "Content-Type": "application/json" }).end(JSON.stringify(body)); };
-  const request = (r) => ({ ...r, lessons: q.lessons(r.id).map((l) => library.lesson(l.course, l.lesson)) });
+  const request = (r) => ({ ...r, lessons: q.lessons(r.id).map((l) => library.lesson(l.course, l.lesson)).filter(Boolean) });
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x"), p = decodeURIComponent(url.pathname);
     try {
@@ -43,7 +43,7 @@ export function serve(q, { port = 4747, host = "127.0.0.1" } = {}) {
       if ((m = /^\/api\/requests\/(\d+)$/.exec(p))) {
         const r = q.get(Number(m[1]));
         if (!r) return send(res, { error: "no such request" }, 404);
-        return send(res, { stages: STAGES, ...r, events: q.events(r.id), lessons: q.lessons(r.id).map((l) => library.lesson(l.course, l.lesson, { detail: true })) });
+        return send(res, { stages: STAGES, ...r, events: q.events(r.id), lessons: q.lessons(r.id).map((l) => library.lesson(l.course, l.lesson, { detail: true })).filter(Boolean) });
       }
       // One stream for the whole site: every new event, as it is written.
       if (p === "/api/stream") {

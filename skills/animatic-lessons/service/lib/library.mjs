@@ -11,6 +11,7 @@ const mtime = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; 
 
 export function lesson(course, slug, { detail = false } = {}) {
   const dir = path.join(LIBRARY, course, "lessons", slug);
+  if (!fs.existsSync(dir)) return null; // renamed or dropped since it was attached
   const info = json(path.join(dir, "lesson.json"), {});
   const tl = json(path.join(dir, "timeline.json")) ?? json(path.join(dir, "build/timeline.json"));
   const moments = tl ? tl.moments ?? tl : null;

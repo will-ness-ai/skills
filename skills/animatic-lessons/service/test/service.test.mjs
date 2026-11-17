@@ -33,8 +33,9 @@ test("stages are a fixed list, and every change is an event", () => {
   q.stage(r.id, "research", "reading the docs");
   assert.throws(() => q.stage(r.id, "thinking"), /unknown stage/);
   q.attach(r.id, "demo", "0001-first");
+  q.attach(r.id, "demo", "0009-renamed"); q.detach(r.id, "demo", "0009-renamed");
   q.finish(r.id, "done", "one lesson");
-  assert.deepEqual(q.events(r.id).map((e) => e.kind), ["queued", "claimed", "stage", "lesson", "done"]);
+  assert.deepEqual(q.events(r.id).map((e) => e.kind), ["queued", "claimed", "stage", "lesson", "lesson", "log", "done"]);
   assert.deepEqual(q.lessons(r.id), [{ course: "demo", lesson: "0001-first" }]);
 });
 

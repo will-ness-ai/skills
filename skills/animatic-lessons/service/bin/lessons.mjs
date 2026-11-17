@@ -16,6 +16,7 @@ Report (the worker agent, on request <id>):
   lessons stage <id> <${STAGES.join("|")}> ["note"]
   lessons log <id> "<one line>"
   lessons attach <id> <course> [<lesson>]        the course it belongs to, each lesson as it is started
+  lessons detach <id> <course> <lesson>          a lesson folder that was renamed, merged or dropped
   lessons done <id> "<what was made>"            lessons fail <id> "<why>"       lessons requeue <id>
 
 Run (a person):
@@ -70,6 +71,7 @@ try {
     case "stage": q.stage(id(), args[1] ?? die("name a stage"), args.slice(2).join(" ") || null); break;
     case "log": q.log(id(), "log", args.slice(1).join(" ") || die("say what happened")); break;
     case "attach": q.attach(id(), args[1] ?? die("name the course"), args[2] ?? null); break;
+    case "detach": q.detach(id(), args[1] ?? die("name the course"), args[2] ?? die("name the lesson folder")); break;
     case "done": q.finish(id(), "done", args.slice(1).join(" ") || null); break;
     case "fail": q.finish(id(), "failed", args.slice(1).join(" ") || die("say why")); break;
     case "requeue": q.requeue(id()); break;
