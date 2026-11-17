@@ -10,7 +10,7 @@ any agent ── lessons request "…" ──▶  queue (SQLite)  ◀── less
                               courses · lessons · queue, live                starts `claude -p` on it
 ```
 
-Node 22.5+ and nothing else: the queue is `node:sqlite`, the site is `node:http`. Making a lesson also needs `ffmpeg` and Claude Code (`claude`) on PATH.
+Node 22.13+ and nothing else: the queue is `node:sqlite`, the site is `node:http`. Making a lesson also needs `ffmpeg` and Claude Code (`claude`) on PATH.
 
 ## Install (macOS)
 
@@ -30,7 +30,7 @@ Elsewhere, or by hand: `lessons serve` in one terminal, `lessons work` in anothe
 ~/.animatic-lessons/
   lessons.db       the queue: requests, their lessons, every event
   library/<course>/  one folder per course, laid out by the skill's starter kit (references/KIT.md)
-  config.json      optional: { "voiceFlags": [...], "agent": [...], "pollSeconds": 5, "maxMinutes": 60 }
+  config.json      optional: { "voiceFlags": [...], "agent": [...], "pollSeconds": 5, "maxMinutes": 60 }   (maxMinutes 0: no limit)
   logs/            the site, the worker, and each request's raw agent stream
 ```
 
@@ -59,7 +59,7 @@ Run from an agent's working folder, it also records the conversation the request
 | `frames` | frames rendered without voice, read at full size, critiqued, fixed, repeated |
 | `render` | the final videos, with voice and captions |
 
-The agent's stream is copied into the queue as it arrives, so the site shows what it says and each tool it calls. One request runs at a time. A request still running after `maxMinutes` is stopped and marked failed. A request whose agent stops without closing it is marked failed; one a crashed worker held is retried once.
+The agent's stream is copied into the queue as it arrives, so the site shows what it says and each tool it calls. One request runs at a time. A request still running after `maxMinutes` is stopped and marked failed. Stopping the worker stops its agent. A request whose agent stops without closing it is marked failed; one a crashed worker held is retried once.
 
 **Permissions.** The agent runs unattended, so it is started with `--permission-mode acceptEdits` and an allowlist that includes `Bash`, `WebFetch` and subagents. It can run any command as you. Change the command in `config.json` (`agent`) to narrow that.
 
@@ -72,7 +72,7 @@ The agent's stream is copied into the queue as it arrives, so the site shows wha
 - **Queue**: what is being made, what is waiting, what finished.
 - **A request's page**: its stage, the agent's transcript as it happens, and each lesson's script, then frames, then video as they come into being.
 
-It listens on `127.0.0.1` only. `lessons serve --host 0.0.0.0` opens it to your network; it has no sign-in.
+It listens on `127.0.0.1` only, and takes a new request only from its own pages, so no other site open in the browser can queue work for the agent. `lessons serve --host 0.0.0.0` opens it to your network; it has no sign-in.
 
 ## Tests
 

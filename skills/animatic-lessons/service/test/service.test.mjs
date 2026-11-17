@@ -87,11 +87,29 @@ test("a request that outlives its time limit is stopped and failed", async () =>
   assert.match(q.get(r.id).summary, /stopped after .* minutes/);
 });
 
+test("a request says when no worker is running, and links to the port the site is on", () => {
+  q.db.exec("DELETE FROM pulse");
+  assert.match(cli("request", "nobody home", "--transcript", "none").stdout, /no worker is running/);
+  q.beat("worker", { pid: 1 }); q.beat("site", { port: 5123 });
+  const out = cli("request", "somebody home", "--transcript", "none").stdout;
+  assert.doesNotMatch(out, /no worker/); assert.match(out, /localhost:5123\/queue\//);
+  for (const r of q.list("queued")) q.finish(r.id, "done");
+  q.db.exec("DELETE FROM pulse");
+});
+
+test("no time limit when maxMinutes is 0", async () => {
+  fs.writeFileSync(path.join(home, "config.json"), JSON.stringify({ maxMinutes: 0, agent: [process.execPath, "-e", "setTimeout(() => {}, 300)"] }));
+  const r = q.add({ request: "unlimited" });
+  await run(q, q.claim("w"));
+  assert.match(q.get(r.id).summary, /without finishing/);
+});
+
 test("doctor names what is missing, and fails when a lesson could not be made", () => {
   const r = spawnSync(process.execPath, [path.join(SERVICE, "bin/lessons.mjs"), "doctor", "--port", "1"], { encoding: "utf8", env: { LESSONS_HOME: home, PATH: "/nonexistent" } });
   assert.equal(r.status, 1);
   assert.match(r.stdout, /ok\s+node/);
   assert.match(r.stdout, /FAIL\s+claude\s+not on PATH/);
+  assert.match(r.stdout, /--\s+worker\s+not running/);
   assert.match(r.stdout, /--\s+site\s+nothing answers on port 1/);
 });
 
@@ -127,11 +145,21 @@ test("the library reads courses from folders, and the site serves them", async (
     assert.deepEqual([part.status, await part.text(), part.headers.get("content-range")], [206, "2345", "bytes 2-5/10"]);
     assert.equal((await fetch(`${base}/library/..%2f..%2flessons.db`)).status, 404);
     assert.match(await (await fetch(`${base}/queue/3`)).text(), /<main id="main">/);
-    const made = await (await fetch(`${base}/api/requests`, { method: "POST", body: JSON.stringify({ request: "from the site" }) })).json();
+    const json = { "Content-Type": "application/json" }, post = (headers, body = JSON.stringify({ request: "from the site" })) => fetch(`${base}/api/requests`, { method: "POST", headers, body });
+    const made = await (await post(json)).json();
     const got = await (await fetch(`${base}/api/requests/${made.id}`)).json();
     assert.deepEqual([got.status, got.events[0].kind], ["queued", "queued"]);
-    assert.equal((await fetch(`${base}/api/requests`, { method: "POST", body: "{}" })).status, 400);
+    assert.equal((await post(json, "{}")).status, 400);
     q.finish(made.id, "done");
+    // Another site's page cannot queue work for the agent.
+    assert.equal((await post({})).status, 403);
+    assert.equal((await post({ ...json, Origin: "https://elsewhere.example" })).status, 403);
+    assert.equal(q.list("queued").length, 0);
+    // Requests that used to stop the site.
+    assert.equal((await fetch(`${base}/library/demo/lessons/0001-first/animatic.mp4`, { headers: { Range: "bytes=5-2" } })).status, 416);
+    assert.equal((await fetch(`${base}/%E0%A4%A`)).status, 400);
+    assert.equal((await fetch(`${base}/api/courses`)).status, 200);
+    assert.equal(q.alive("site").port, server.address().port);
   } finally { server.closeAllConnections(); server.close(); }
 });
 

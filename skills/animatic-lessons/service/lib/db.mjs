@@ -1,15 +1,19 @@
 // The queue: one SQLite file, shared by the CLI, the worker and the site.
-// node:sqlite ships with Node 22.5+, so the service has no dependencies.
+// node:sqlite ships with Node 22.13+, so the service has no dependencies.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 process.removeAllListeners("warning"); // node:sqlite prints an ExperimentalWarning on every run
 process.on("warning", (w) => { if (w.name !== "ExperimentalWarning") console.error(w.stack ?? String(w)); });
-const { DatabaseSync } = await import("node:sqlite");
+const { DatabaseSync } = await import("node:sqlite").catch(() => {
+  console.error(`lessons: the queue needs Node 22.13 or later (node:sqlite); this is ${process.version}. Run it with a newer node.`);
+  process.exit(1);
+});
 
 export const HOME = process.env.LESSONS_HOME ?? path.join(os.homedir(), ".animatic-lessons");
 export const LIBRARY = process.env.LESSONS_LIBRARY ?? path.join(HOME, "library");
+export const BEAT = 5000, ALIVE = 20000;
 export const STAGES = ["context", "course", "research", "plan", "write", "learner", "frames", "render"];
 
 const SCHEMA = `
@@ -42,6 +46,7 @@ CREATE TABLE IF NOT EXISTS events (
   kind TEXT NOT NULL,               -- queued | claimed | stage | say | tool | log | lesson | done | failed
   text TEXT
 );
+CREATE TABLE IF NOT EXISTS pulse (name TEXT PRIMARY KEY, ts INTEGER NOT NULL, data TEXT);  -- site, worker: each says it is alive
 CREATE INDEX IF NOT EXISTS events_request ON events (request_id, id);
 `;
 
@@ -84,6 +89,9 @@ export function open(file = path.join(HOME, "lessons.db")) {
       db.prepare("UPDATE requests SET course = ? WHERE id = ?").run(course, id);
       if (lesson) { db.prepare("INSERT OR IGNORE INTO request_lessons VALUES (?, ?, ?)").run(id, course, lesson); event(id, "lesson", `${course}/${lesson}`); }
     },
+    // The site and the worker each beat every few seconds; a pulse older than ALIVE means it is not running.
+    beat(name, data = {}) { db.prepare("INSERT INTO pulse VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET ts = excluded.ts, data = excluded.data").run(name, now(), JSON.stringify(data)); },
+    alive(name) { const p = db.prepare("SELECT * FROM pulse WHERE name = ?").get(name); return p && now() - p.ts < ALIVE ? JSON.parse(p.data) : null; },
     // A lesson folder the agent renamed, merged or dropped.
     detach(id, course, lesson) { need(id); db.prepare("DELETE FROM request_lessons WHERE request_id = ? AND course = ? AND lesson = ?").run(id, course, lesson); event(id, "log", `dropped ${course}/${lesson}`); },
     finish(id, status, summary = null) {

@@ -6,7 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HOME, LIBRARY } from "./db.mjs";
+import { BEAT, HOME, LIBRARY } from "./db.mjs";
 
 const SERVICE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SKILL = path.resolve(SERVICE, "..");
@@ -21,7 +21,7 @@ export const config = () => {
       "--allowedTools", "Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch,Agent,Task"],
     voiceFlags: [],
     pollSeconds: 5,
-    maxMinutes: 60, // a request still running after this is stopped and failed
+    maxMinutes: 60, // a request still running after this is stopped and failed; 0 means no limit
     ...file,
   };
 };
@@ -58,6 +58,9 @@ export function record(q, id, line) {
   if (m.type === "result") return m;
 }
 
+// Stops the agent now running, if any. It has its own process group, so it would outlive the worker.
+let running = null;
+
 export function run(q, r, cfg = config()) {
   return new Promise((resolve) => {
     const [cmd, ...args] = cfg.agent;
@@ -68,8 +71,10 @@ export function run(q, r, cfg = config()) {
     const child = spawn(cmd, [...args, ...(cmd === "claude" ? dirs : [])], { cwd: LIBRARY, env: { ...process.env, LESSONS_REQUEST: String(r.id) }, stdio: ["pipe", "pipe", "pipe"], detached: true });
     // Its own process group, so stopping it also stops the builds and subagents it started.
     const stop = (signal) => { try { process.kill(-child.pid, signal); } catch {} };
+    running = stop;
     let late = false;
-    const limit = setTimeout(() => { late = true; stop("SIGTERM"); setTimeout(() => stop("SIGKILL"), 5000).unref(); }, cfg.maxMinutes * 60_000);
+    const ms = Number(cfg.maxMinutes) * 60_000;
+    const limit = ms > 0 ? setTimeout(() => { late = true; stop("SIGTERM"); setTimeout(() => stop("SIGKILL"), 5000).unref(); }, Math.min(ms, 2 ** 31 - 1)) : null;
     child.stdin.on("error", () => {}); // an agent that never reads its prompt
     child.stdin.end(prompt(r, cfg));
     let buf = "", result = null, err = "";
@@ -80,8 +85,9 @@ export function run(q, r, cfg = config()) {
       while ((i = buf.indexOf("\n")) >= 0) { result = record(q, r.id, buf.slice(0, i)) ?? result; buf = buf.slice(i + 1); }
     });
     child.stderr.on("data", (d) => { err = (err + d).slice(-2000); });
-    child.on("error", (e) => { clearTimeout(limit); q.finish(r.id, "failed", `could not start the agent (${cmd}): ${e.message}`); resolve(); });
+    child.on("error", (e) => { running = null; clearTimeout(limit); q.finish(r.id, "failed", `could not start the agent (${cmd}): ${e.message}`); resolve(); });
     child.on("close", (code) => {
+      running = null;
       clearTimeout(limit);
       raw.end();
       // The agent closes its own request with `lessons done`. One still open is a failure.
@@ -94,6 +100,14 @@ export function run(q, r, cfg = config()) {
 export async function work(q, { once = false, log = console.log } = {}) {
   const name = `${os.hostname()}:worker`;
   q.recover(name);
+  // A stopped worker takes its agent with it; the next worker requeues the request.
+  for (const s of ["SIGTERM", "SIGINT"]) process.once(s, () => { running?.("SIGTERM"); process.exit(0); });
+  const beat = () => q.beat("worker", { pid: process.pid });
+  beat(); const pulse = setInterval(beat, BEAT);
+  try { await loop(q, name, { once, log }); } finally { clearInterval(pulse); }
+}
+
+async function loop(q, name, { once, log }) {
   for (;;) {
     const cfg = config();
     const r = q.claim(name);

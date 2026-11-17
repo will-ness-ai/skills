@@ -11,7 +11,7 @@ Queue a lesson only when the person asks for one. If you think a lesson would he
 
 Run `lessons help`. If the shell has no `lessons`, use `node ~/.claude/skills/animatic-lessons/service/bin/lessons.mjs` in its place (`~/.agents/skills/…` in a harness that keeps skills there).
 
-If neither exists, the service is not installed. Tell the person, and point them to `/animatic-lessons`, which makes lessons in this session with no service.
+If neither exists, the skills that hold the service are not installed. Tell the person, and point them to `/animatic-lessons`, which makes lessons in this session with no service.
 
 ## 2. Write the request
 
@@ -31,12 +31,14 @@ Run from the working folder of this session:
 lessons request "<the request>"
 ```
 
-From there the command records this session's transcript and the person's last message, and the worker reads around that message for context. Two flags change what it records:
+From there the command records a transcript and the person's last message in it, and the worker reads around that message for context. It prints the transcript it chose on a `context:` line. In Claude Code that is this session; in another harness it is a guess at the folder's newest Claude Code session, so pass `--transcript none` unless you know it is this conversation.
+
+Two more flags:
 
 - `--course <slug>` when the lesson belongs in a course that exists. `lessons courses` lists them.
-- `--transcript none` when this conversation holds something the person would not want another agent to read.
+- `--transcript none` also when this conversation holds something the person would not want another agent to read.
 
-Done when the command prints `queued request <id>` and a link.
+Done when the command prints `queued request <id>` and a link. If it also prints `no worker is running`, the request will wait: say so in step 4, with the command it names.
 
 ## 4. Tell the person
 

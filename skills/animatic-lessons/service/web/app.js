@@ -123,7 +123,7 @@ const dialog = document.getElementById("ask-dialog");
 document.getElementById("ask").addEventListener("click", () => dialog.showModal());
 dialog.addEventListener("close", async () => {
   const text = dialog.querySelector("textarea");
-  if (dialog.returnValue === "send" && text.value.trim()) { const r = await api("/api/requests", { method: "POST", body: JSON.stringify({ request: text.value }) }); text.value = ""; go(`/queue/${r.id}`); }
+  if (dialog.returnValue === "send" && text.value.trim()) { const r = await api("/api/requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ request: text.value }) }); text.value = ""; go(`/queue/${r.id}`); }
 });
 new EventSource("/api/stream").onmessage = (m) => { const e = JSON.parse(m.data); view?.event?.(e); if (e.kind !== "say" && e.kind !== "tool") nav(); };
 setInterval(() => view?.tick?.(), 3000);

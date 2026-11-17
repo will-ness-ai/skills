@@ -36,7 +36,7 @@ for (let i = 0; i < argv.length; i++) {
 }
 const die = (m, code = 1) => { console.error(`lessons: ${m}`); process.exit(code); };
 const id = () => { const n = Number(args[0] ?? process.env.LESSONS_REQUEST); if (!Number.isInteger(n)) die("name a request id"); return n; };
-const port = () => Number(flags.port ?? process.env.LESSONS_PORT ?? 4747);
+const port = (q) => Number(flags.port ?? process.env.LESSONS_PORT ?? q?.alive("site")?.port ?? 4747);
 const line = (r) => `${String(r.id).padStart(4)}  ${r.status.padEnd(8)}${(r.stage ?? "").padEnd(9)} ${r.course ? `[${r.course}] ` : ""}${r.request.replace(/\s+/g, " ").slice(0, 90)}`;
 
 // The requesting agent's own session: Claude Code keeps one .jsonl per session under
@@ -44,7 +44,9 @@ const line = (r) => `${String(r.id).padStart(4)}  ${r.status.padEnd(8)}${(r.stag
 function session(cwd) {
   const dir = path.join(os.homedir(), ".claude/projects", cwd.replace(/[^a-zA-Z0-9]/g, "-"));
   if (!fs.existsSync(dir)) return {};
-  const newest = fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => path.join(dir, f)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+  // Claude Code names its own session in the environment; without that, the newest transcript is the best guess.
+  const own = process.env.CLAUDE_CODE_SESSION_ID && path.join(dir, `${process.env.CLAUDE_CODE_SESSION_ID}.jsonl`);
+  const newest = own && fs.existsSync(own) ? own : fs.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => path.join(dir, f)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
   if (!newest) return {};
   let message = null;
   for (const l of fs.readFileSync(newest, "utf8").split("\n")) {
@@ -61,8 +63,10 @@ try {
       const cwd = process.cwd();
       const auto = flags.transcript === "none" ? {} : !flags.transcript || flags.transcript === "auto" ? session(cwd) : { transcript_path: path.resolve(flags.transcript) };
       const r = q.add({ request: args.join(" "), cwd, course: flags.course === true ? null : flags.course ?? null, transcript_path: auto.transcript_path ?? null, message_id: flags.message ?? auto.message_id ?? null });
-      console.log(`queued request ${r.id}\nwatch it: http://localhost:${port()}/queue/${r.id}`);
-      if (!r.transcript_path) console.log("no transcript found for this folder; pass --transcript <path> to give the worker the conversation around the request");
+      console.log(`queued request ${r.id}\nwatch it: http://localhost:${port(q)}/queue/${r.id}`);
+      if (!q.alive("worker")) console.log("no worker is running, so nothing will make this yet. Start one: `lessons work`, or `lessons install` on a Mac");
+      if (r.transcript_path) console.log(`context: ${r.transcript_path}${r.message_id ? `, message ${r.message_id}` : ""}`);
+      if (!r.transcript_path && flags.transcript !== "none") console.log("no transcript found for this folder; pass --transcript <path> to give the worker the conversation around the request");
       break;
     }
     case "list": q.list(args[0] ?? null).reverse().forEach((r) => console.log(line(r))); break;
@@ -76,10 +80,10 @@ try {
     case "done": q.finish(id(), "done", args.slice(1).join(" ") || null); break;
     case "fail": q.finish(id(), "failed", args.slice(1).join(" ") || die("say why")); break;
     case "requeue": q.requeue(id()); break;
-    case "home": console.log(`home     ${HOME}\nqueue    ${path.join(HOME, "lessons.db")}\nlibrary  ${LIBRARY}\nconfig   ${path.join(HOME, "config.json")}\nsite     http://localhost:${port()}`); break;
+    case "home": console.log(`home     ${HOME}\nqueue    ${path.join(HOME, "lessons.db")}\nlibrary  ${LIBRARY}\nconfig   ${path.join(HOME, "config.json")}\nsite     http://localhost:${port(q)}`); break;
     case "serve": { const { serve } = await import("../lib/server.mjs"); await serve(q, { port: port(), host: flags.host ?? "127.0.0.1" }); console.log(`lessons: http://localhost:${port()}  (library: ${LIBRARY})`); break; }
     case "work": { const { work } = await import("../lib/worker.mjs"); await work(q, { once: Boolean(flags.once) }); break; }
-    case "doctor": { const { doctor } = await import("../lib/doctor.mjs"); process.exitCode = (await doctor({ port: port() })) ? 0 : 1; break; }
+    case "doctor": { const { doctor } = await import("../lib/doctor.mjs"); process.exitCode = (await doctor(q, { port: port(q) })) ? 0 : 1; break; }
     case "install": case "uninstall": { const m = await import("../lib/install.mjs"); m[verb]({ port: port() }); break; }
     default: die(`unknown command "${verb}". Run: lessons help`);
   }
