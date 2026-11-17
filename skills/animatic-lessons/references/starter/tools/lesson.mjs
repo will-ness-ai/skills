@@ -6,9 +6,11 @@
 //
 // build runs four steps; each is also a verb of its own:
 //   expand    storyboard.src.json -> storyboard.json + frames/NN.html (one stub per map moment)
-//   (animatic build -> build/nocap.mp4, build/NN.png, build/timeline.json, sheet.png)
+//   (the engine's build -> build/nocap.mp4, build/NN.png, build/timeline.json, sheet.png, poster.png)
 //   captions  timeline + each moment's text -> captions.vtt, burned into animatic.mp4
 //   page      lesson.json + transcript -> index.html   (no folder named: every lesson)
+// And one more verb, for the screenshot loop before any voice is spent:
+//   frames    expand, then the engine's render: build/NN.png and sheet.png only
 //
 // The course folder is the lesson folder's grandparent:
 //   course.json   { "title", "map": { grid, nodes, zones, edges, show } }   (map is optional)
@@ -77,7 +79,7 @@ function expand(dir) {
   console.log(`expand: ${out.length} moments, ${maps} map frames`);
 }
 
-function animatic(dir) {
+function engine(dir, verb) {
   const script = process.env.ANIMATIC;
   if (!script || !fs.existsSync(script)) die("set ANIMATIC to the animatic-lessons skill's references/engine/scripts/animatic.mjs");
   const assets = path.resolve(dir, "../../assets");
@@ -87,8 +89,11 @@ function animatic(dir) {
   // The course's frames.css, then the lesson's own, layered over the kit for generated frames.
   const css = [path.join(assets, "frames.css"), path.join(dir, "frames.css")].filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, "utf8")).join("\n");
   fs.writeFileSync(path.join(dir, "build/frames.css"), css);
-  const r = spawnSync("node", [script, "build", "storyboard.json", "-o", "build/nocap.mp4", "--sheet", "sheet.png", "--css", "build/frames.css", ...flags], { cwd: dir, stdio: "inherit" });
-  if (r.status !== 0) die("animatic build stopped; fix what it printed and run build again");
+  const out = verb === "build" ? ["-o", "build/nocap.mp4"] : [];
+  const r = spawnSync("node", [script, verb, "storyboard.json", ...out, "--sheet", "sheet.png", "--css", "build/frames.css", ...flags], { cwd: dir, stdio: "inherit" });
+  if (r.status !== 0) die(`the engine's ${verb} stopped; fix what it printed and run it again`);
+  // The lesson's thumbnail: its opening card.
+  if (fs.existsSync(path.join(dir, "build/01.png"))) fs.copyFileSync(path.join(dir, "build/01.png"), path.join(dir, "poster.png"));
 }
 
 const timeline = (dir) => { const t = maybe(path.join(dir, "build/timeline.json"), null) ?? maybe(path.join(dir, "timeline.json"), null); return t ? t.moments ?? t : null; };
@@ -159,8 +164,9 @@ ${l.note ? `<p class="meta">${md(l.note)}</p>` : ""}
 const dirs = (course = ".") => { const root = path.resolve(course, "lessons"); if (!fs.existsSync(root)) die("name a lesson folder, or run from the course folder"); return fs.readdirSync(root).sort().map((s) => path.join(root, s)).filter((d) => fs.existsSync(path.join(d, "lesson.json"))); };
 const dir = lessonArg ? path.resolve(lessonArg) : null;
 if (dir && !fs.existsSync(path.join(dir, "storyboard.src.json"))) die(`${lessonArg}: no storyboard.src.json`);
-if (verb === "build" && dir) { expand(dir); animatic(dir); captions(dir); dirs(path.resolve(dir, "../..")).forEach(page); } // every page: the series nav changed
+if (verb === "build" && dir) { expand(dir); engine(dir, "build"); captions(dir); dirs(path.resolve(dir, "../..")).forEach(page); } // every page: the series nav changed
 else if (verb === "expand" && dir) expand(dir);
+else if (verb === "frames" && dir) { expand(dir); engine(dir, "render"); } // frames and sheet only: no voice, no video
 else if (verb === "captions" && dir) captions(dir);
 else if (verb === "page") (dir ? [dir] : dirs()).forEach(page);
-else die("usage: lesson.mjs build|expand|captions|page <lesson-folder> [animatic flags]");
+else die("usage: lesson.mjs build|frames|expand|captions|page <lesson-folder> [engine flags]");

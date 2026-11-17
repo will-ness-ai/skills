@@ -75,6 +75,10 @@ Read [`LESSON.md`](references/LESSON.md) before you write: it holds what a lesso
 
 Done when the build ends with `no warnings`, a screenshot pass finds nothing left to fix, and every point the learner raised is fixed or answered with the source that settles it.
 
+## The service
+
+[`service/`](service/README.md) runs this skill unattended on a Mac: a queue any agent can add to (`lessons request "…"`), a worker that makes each request's lessons, and a site that shows the library and the queue live. A request that should be made in the background goes there.
+
 ---
 
 Built on Matt Pocock's [`teach`](https://github.com/mattpocock/skills/tree/main/skills/productivity/teach) and `animatic` skills from [mattpocock/skills](https://github.com/mattpocock/skills). The engine is his `animatic`, vendored: see [`references/engine/README.md`](references/engine/README.md).

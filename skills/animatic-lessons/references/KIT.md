@@ -29,9 +29,9 @@ Flags after the folder go to the engine's `build` unchanged: the voice flags, `-
 
 - `storyboard.json` and `frames/` (generated: edit `storyboard.src.json`, never these)
 - `build/` (the engine's cache: `NN.png` per moment, `timeline.json`, `nocap.mp4`, the clean video)
-- `sheet.png`, `animatic.mp4` (captions burned in), `captions.vtt`, `timeline.json`, `index.html`
+- `sheet.png`, `poster.png` (the opening card), `animatic.mp4` (captions burned in), `captions.vtt`, `timeline.json`, `index.html`
 
-Single steps: `lesson.mjs expand|captions <lesson>`, and `lesson.mjs page [<lesson>]` (no folder: every page, from the course folder).
+Single steps: `lesson.mjs expand|captions <lesson>`, and `lesson.mjs page [<lesson>]` (no folder: every page, from the course folder). `lesson.mjs frames <lesson>` expands and renders `build/NN.png` and `sheet.png` only, with no voice and no video: the cheap build for the screenshot loop.
 
 Where ffmpeg has no subtitle filter, the build prints `WARN captions`, ships the video clean, and the page still plays `captions.vtt`. Say so at hand-over.
 
