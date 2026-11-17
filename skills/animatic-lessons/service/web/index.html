@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lessons</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" data-link><span class="mark">▶</span> Lessons</a>
+  <form class="search" id="search"><input type="search" placeholder="Search lessons" aria-label="Search lessons" autocomplete="off"></form>
+  <button class="ask" id="ask">Request a lesson</button>
+</header>
+<nav class="side" id="side"></nav>
+<main id="main"></main>
+<dialog id="ask-dialog">
+  <form method="dialog" id="ask-form">
+    <h2>Request a lesson</h2>
+    <p>Say what you want to understand, and why it came up. An agent researches it and makes one to three short videos.</p>
+    <textarea name="request" rows="4" required placeholder="How does Tailnet Lock work, and do I need it for a solo tailnet?"></textarea>
+    <div class="row"><button value="cancel" formnovalidate>Cancel</button><button value="send" class="primary">Add to queue</button></div>
+  </form>
+</dialog>
+<script type="module" src="/web/app.js"></script>
+</body>
+</html>

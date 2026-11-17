@@ -1,0 +1,3 @@
+interface:
+  display_name: "Request a Lesson"
+  short_description: "Queue a narrated video lesson with the lessons service"
