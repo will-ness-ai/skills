@@ -1039,9 +1039,9 @@ body {
   font-weight: 400;
   color: var(--dim);
 }
-.gtable td.ok { color: var(--ok); }
-.gtable td.bad { color: var(--error); }
-.gtable td.warn { color: var(--warn); }
+.gtable td.ok, .gtable tr.lit td.ok { color: var(--ok); }
+.gtable td.bad, .gtable tr.lit td.bad { color: var(--error); }
+.gtable td.warn, .gtable tr.lit td.warn { color: var(--warn); }
 .gtable.spotlight tbody tr { opacity: 0.45; }
 .gtable.spotlight tbody tr.lit,
 .gtable.spotlight tbody tr:has(td.lit) { opacity: 1; }
@@ -1264,6 +1264,9 @@ body {
 .gopt.right .gk { background: var(--ok); color: #fff; }
 .gopt.wrong .gt { text-decoration: line-through; text-decoration-color: var(--error); text-decoration-thickness: 4px; color: var(--dim); }
 .gopt.wrong .gk { background: rgba(203, 118, 118, 0.25); color: var(--error); }
+
+/* a long output line wraps under itself, not at column 0 */
+.terminal.gen .out { padding-left: 2ch; text-indent: -2ch; }
 
 /* agent: a generated Claude Code session (.terminal.cc above); lines are spans */
 .terminal.cc.gen > * { display: block; }

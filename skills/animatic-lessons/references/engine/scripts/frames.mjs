@@ -329,9 +329,11 @@ const consoleFrame = (spec, warns) => {
       : `<div>${prose(warns, "cell", c)}</div>`));
     const more = menu ? `<div class="cmore">&middot;&middot;&middot;${i === menuRow ? menuHtml : ""}</div>` : "";
     const on = (lit.kind === "row" && lit.i === i) || (lit.kind === "menu" && i === menuRow);
-    return `<div class="crow${on ? " on" : ""}${lit.kind === "row" && lit.i === i ? " lit here" : ""}" style="${grid}"${hidden(spec, i)}>${cells.join("")}${more}</div>`;
+    const gone = spec.show !== undefined && i >= spec.show ? "; visibility:hidden" : "";
+    return `<div class="crow${on ? " on keep" : ""}${lit.kind === "row" && lit.i === i ? " lit here" : ""}" style="${grid}${gone}">${cells.join("")}${more}</div>`;
   });
-  const nav = (spec.nav ?? []).map((n, i) => `<span class="${i === 0 ? "cur" : ""}${lit.kind === "nav" && lit.i === i ? " lit" : ""}">${prose(warns, "nav", n)}</span>`).join("");
+  const tab = typeof spec.tab === "number" ? spec.tab - 1 : spec.tab ? (spec.nav ?? []).findIndex((n) => String(n).includes(String(spec.tab))) : 0;
+  const nav = (spec.nav ?? []).map((n, i) => `<span class="${i === tab ? "cur" : ""}${lit.kind === "nav" && lit.i === i ? " lit" : ""}">${prose(warns, "nav", n)}</span>`).join("");
   const [host, ...rest] = String(spec.url ?? "").replace(/^https?:\/\//, "").split("/");
   return `<div class="frame frame--inset"><div class="window">
 <div class="browserbar">${lights}<div class="nav-buttons"><span>&lsaquo;</span><span>&rsaquo;</span><span>&circlearrowright;</span></div>
@@ -493,7 +495,7 @@ export const fitInPage = () => {
       const all = [...box.children];
       const lit = box.querySelector(".here");
       const li = lit ? all.indexOf(lit) : -1;
-      const can = all.filter((r) => !r.classList.contains("fold") && r !== lit);
+      const can = all.filter((r) => !r.classList.contains("fold") && !r.classList.contains("keep") && r !== lit);
       if (!can.length) break;
       let victim;
       if (trim === "top") victim = can[0];
