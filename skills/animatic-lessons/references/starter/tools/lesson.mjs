@@ -105,8 +105,8 @@ function captions(dir) {
   if (!tl || !fs.existsSync(clean)) die("no build/nocap.mp4 or build/timeline.json; run build first");
   if (tl.length !== lines.length) die(`timeline has ${tl.length} moments, storyboard.src.json has ${lines.length}; rebuild`);
   // Kept beside the lesson, so the page can be regenerated after build/ is gone.
-  const length = tl[tl.length - 1].start + tl[tl.length - 1].seconds;
-  console.log(`${length > 90 ? "WARN " : ""}length: ${Math.round(length)} s${length > 90 ? " (over the 90 s a lesson gets; cut narration or split it)" : ""}`);
+  const length = Math.round((tl[tl.length - 1].start + tl[tl.length - 1].seconds) * 10) / 10;
+  console.log(`${length > 90 ? "WARN " : ""}length: ${length} s${length > 90 ? " (over the 90 s a lesson gets; cut narration or split it)" : ""}`);
   fs.writeFileSync(path.join(dir, "timeline.json"), JSON.stringify(tl.map(({ n, cut, start, seconds }) => ({ n, cut, start, seconds }))) + "\n");
   const wrap = (s, w = 42) => s.split(/\s+/).reduce((rows, word) => { const last = rows[rows.length - 1]; if (last !== undefined && (last + " " + word).length <= w) rows[rows.length - 1] = last + " " + word; else rows.push(word); return rows; }, []);
   const cues = [];

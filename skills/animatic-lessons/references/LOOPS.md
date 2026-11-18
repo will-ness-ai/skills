@@ -51,6 +51,6 @@ Report by moment number:
 End with the five highest-value changes, ranked. "It was clear" only where it was.
 ```
 
-Then revise. The learner reports what it missed; it guesses at the fix. Check each proposed fact against `research.md` before using it, and answer a point you reject with the source that settles it. Rebuild, and run one screenshot pass over the changed frames.
+Save its report as `learner-review.md` in the lesson folder, beside `critique.md` (in the course folder when one review covers several lessons). Then revise. The learner reports what it missed; it guesses at the fix. Check each proposed fact against `research.md` before using it, and answer a point you reject with the source that settles it. Rebuild, and run one screenshot pass over the changed frames.
 
 Done when every ranked change is made or answered, and every recall question is answerable from the video.

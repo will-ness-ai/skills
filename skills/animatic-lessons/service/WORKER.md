@@ -84,7 +84,7 @@ Build each lesson for real:
 ANIMATIC={{skill}}/references/engine/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> <voice flags>
 ```
 
-Fix what the build prints until it ends with `no warnings`. Then update the course `README.md`: the lessons made, each with its one line to remember, and the **Frontier**.
+Fix what the build prints until it prints no `WARN` line, the length check included. Then update the course `README.md`: the lessons made, each with its one line to remember, and the **Frontier**.
 
 The build prints each video's length. A lesson over 90 seconds is too long: cut narration (or split the lesson, if it holds a third idea) and build it again.
 

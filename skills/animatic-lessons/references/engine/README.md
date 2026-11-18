@@ -16,4 +16,4 @@ kit/README.md          writing a page of your own for a frame the types cannot s
 
 ## Origin
 
-Vendored from Matt Pocock's `animatic` and `setup-animatic` skills, [mattpocock/skills](https://github.com/mattpocock/skills) branch `animatic-skill` at commit `7100905` (13 Nov 2026), MIT licensed. `scripts/` and `kit/` are unchanged; the three guides are his, with pointers to his other files adjusted. To take his later fixes, copy those files over these.
+Vendored from Matt Pocock's `animatic` and `setup-animatic` skills, [mattpocock/skills](https://github.com/mattpocock/skills) branch `animatic-skill` at commit `7100905` (13 Nov 2026), MIT licensed. The guides are his, with pointers to his other files adjusted. Changed here: ten more generated frame types (`table`, `split`, `anatomy`, `timeline`, `console`, `sequence`, `guess`, `agent`, `tree`, `stack`) in `scripts/frames.mjs`, their styles at the end of `kit/house.css` and their fields in `FRAMES.md`, and the lit-count check in `scripts/animatic.mjs`. To take his later fixes, merge them into these files rather than copying over them.

@@ -17,7 +17,7 @@ A course is one folder. Where it goes is the project's call: put it where this p
 
 A course folder that already exists is a course to **resume**: read its `README.md` and go to step 4 with the user's request.
 
-Otherwise copy the starter kit in, `cp -R <skill>/references/starter/. <course>/`, and add the kit's ignore lines to the repo's `.gitignore` ([`KIT.md`](references/KIT.md), "What to commit").
+Otherwise copy the starter kit in, `cp -R <skill>/references/starter/. <course>/`, and add the kit's ignore lines to a `.gitignore` in the course folder ([`KIT.md`](references/KIT.md), "What to commit"), or to the repo's, each prefixed with the course's path.
 
 Done when the course folder holds `tools/lesson.mjs` and `assets/`, and you can say why it lives where it does.
 
@@ -70,10 +70,10 @@ Read [`LESSON.md`](references/LESSON.md) before you write: it holds what a lesso
    ```
    ANIMATIC=<engine>/scripts/animatic.mjs node tools/lesson.mjs build lessons/NNNN-<slug> <voice flags>
    ```
-   It expands the map moments, runs the engine's `build` (plan gate, frames, voice, video, sheet), burns in captions and writes every lesson page. Fix what it prints and rebuild until it ends with `no warnings`.
+   It expands the map moments, runs the engine's `build` (plan gate, frames, voice, video, sheet), burns in captions and writes every lesson page. Fix what it prints and rebuild until it prints no `WARN` line, the length check included.
 3. Run both loops in [`LOOPS.md`](references/LOOPS.md): the **screenshot loop**, then the **learner loop**. Each finds what the other cannot.
 
-Done when the build ends with `no warnings`, a screenshot pass finds nothing left to fix, and every point the learner raised is fixed or answered with the source that settles it.
+Done when the build prints no `WARN` line, a screenshot pass finds nothing left to fix, and every point the learner raised is fixed or answered with the source that settles it.
 
 ## The service
 

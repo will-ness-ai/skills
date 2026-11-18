@@ -5,7 +5,8 @@ A lesson is watched once, then practised from memory. Everything below serves on
 ## Shape
 
 - **Two ideas at most**, 60 to 90 seconds. The opening card, the closing card and one moment per new term leave room for about two. A third idea is the next lesson.
-- **Open on a guess.** The first moment is a title card asking a question the lesson answers, in the cast's terms ("Your dev box is at home and you're in a café. What has to be open on it?"). Guessing first makes the answer stick, right or wrong.
+- **Open on a guess.** The first moment is a `guess` frame (or a title card) asking a question the lesson answers, in the cast's terms ("Your dev box is at home and you're in a café. What has to be open on it?"). Guessing first makes the answer stick, right or wrong.
+- **Answer the guess on screen.** Before the closing card, cut back to the `guess` with the answer lit (`lit` set to its `answer`).
 - **Close on the one thing to remember**: a title card, one sentence, the same sentence as `remember` in `lesson.json`.
 - **Stand on the lessons before.** Use what earlier lessons set up (their terms, their policy file, their commands), and never contradict it. When this lesson's command would fail under something an earlier lesson taught, show the change that makes it work.
 - **Give the reason before the mechanism**: a problem this user has, in the cast's terms, by the second moment.
@@ -24,10 +25,33 @@ What the sources do not show stays off the screen: output you would have to inve
 
 ## Pictures
 
-- **The map first.** A relationship, a path, a before-and-after: draw it as a change to the course's map ([`KIT.md`](KIT.md)). One change per moment.
+Pick the frame by what the moment shows. Fields are in [`FRAMES.md`](engine/FRAMES.md); the map in [`KIT.md`](KIT.md).
+
+| The moment shows | Frame |
+|---|---|
+| where things are and what reaches what: a path, a block, a before-and-after | the map |
+| a question to guess, or the answer | `guess` |
+| one thing to remember, a section break | `title` |
+| a few steps or boxes in a row | `diagram` |
+| who says what to whom, in order | `sequence` |
+| what happens over time, or when | `timeline` |
+| what is inside what | `stack` |
+| what belongs to what: owners, folders | `tree` |
+| what each part of one name, command or URL means | `anatomy` |
+| a few things compared on the same points | `table` |
+| an overview, a set of options, a reading order | `list` |
+| a command and its output | `terminal` |
+| the same moment on two machines, side by side | `split` |
+| an agent doing the work | `agent` |
+| a file, a config, a diff | `code` |
+| a web app's screen: where to click | `console` |
+| what the docs say | `page` |
+
+- **The map first.** When the map can carry the moment, use it. Leave it when the moment is about order, repetition or comparison: a `sequence`, `timeline` or `table` shows those better.
+- **One change per moment, on every frame.** Each moment lights one thing and its line names that thing. Three clicks on a console are three moments.
 - **The picture carries the claim.** "Nobody outside can open it" is a crossed arrow from outside, where a lit box only points. Draw the mechanism the line names: the hop, the block, the label that flips.
 - **A demonstration agrees with itself.** When the story is "it's slow because it's relayed", the output on screen shows relayed, and the diagnostic shows the failing value.
-- **Name the machine.** Title each terminal with the cast member it runs on. Two machines are two terminals.
+- **Name the machine.** Title each terminal with the cast member it runs on. Two machines are two terminals, side by side in a `split`. Two files on one machine are two `code` moments, or a `table` when the point is how they differ.
 - **Good and bad look different.** Colour a healthy value `ok` and a failing one `bad`.
 - **Captions own the bottom band.** Keep content above y = 930.
 
