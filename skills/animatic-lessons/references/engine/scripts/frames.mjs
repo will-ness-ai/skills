@@ -513,6 +513,23 @@ export const fitInPage = () => {
       dropped++;
     }
     if (dropped) fixes.push(`folded ${dropped} line${dropped > 1 ? "s" : ""} to fit`);
+    // A short code, terminal or agent window grows its type (up to 1.5x) until
+    // the lines fill most of the window, so three lines don't sit in an empty box.
+    if (!dropped && box.matches(".code, .terminal") && box.children.length) {
+      const base = parseFloat(getComputedStyle(box).fontSize);
+      const used = () => box.lastElementChild.getBoundingClientRect().bottom - box.getBoundingClientRect().top;
+      // Rows in font-size units: growing that wraps a line raises it, and stops.
+      const rows = () => [...box.children].reduce((n, c) => n + c.getBoundingClientRect().height, 0) / parseFloat(box.style.fontSize || base);
+      const rows0 = rows();
+      const bad = () => over(box) || box.scrollWidth > box.clientWidth + 2 || used() > box.clientHeight * 0.8 || rows() > rows0 * 1.02;
+      let f = base;
+      while (f + 2 <= base * 1.5 && used() < box.clientHeight * 0.6) {
+        box.style.fontSize = `${f + 2}px`;
+        if (bad()) { box.style.fontSize = `${f}px`; break; }
+        f += 2;
+      }
+      if (f > base) fixes.push(`type grown to ${f}px to fill the window`);
+    }
   }
   const frame = document.querySelector(".frame");
   const warns = [];

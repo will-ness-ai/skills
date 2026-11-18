@@ -35,7 +35,7 @@ Nothing worth fixing.
 
 Left as is: step 2 is a click in the admin console shown as a comment in a terminal. A screenshot of the console would be the better picture; none was available to capture, and a mock-up would break "real content only".
 
-## After the learner review (see `../learner-review-7-9.md`): rebuilt, one screenshot pass on changed frames (1-10), 0 findings
+## After the learner review (see `../../learner-review.md`): rebuilt, one screenshot pass on changed frames (1-10), 0 findings
 
 | # | Frame | Finding |
 |---|---|---|

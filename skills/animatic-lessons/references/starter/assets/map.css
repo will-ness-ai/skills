@@ -28,4 +28,5 @@
 .map .edge .cross { stroke: var(--error); stroke-width: 9; stroke-linecap: round; }
 .map .edge.ok line, .map .edge.ok.lit line { stroke: var(--ok); }
 .map .edge.ok polygon, .map .edge.ok text, .map .edge.ok.lit polygon, .map .edge.ok.lit text { fill: var(--ok); }
-.map .node.off.lit { opacity: 0.85; }
+.map .node.off.lit { opacity: 1; }
+.map .node.off.lit .node-title { color: var(--text); }

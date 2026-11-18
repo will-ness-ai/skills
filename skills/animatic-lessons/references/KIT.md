@@ -37,7 +37,7 @@ Where ffmpeg has no subtitle filter, the build prints `WARN captions`, ships the
 
 ### What to commit
 
-Source and finished lessons are the course; caches are not. Ignore, relative to the course folder:
+Source and finished lessons are the course; caches are not. Put these in `<course>/.gitignore`, which reads them relative to the course folder (in the repo's `.gitignore`, prefix each with the course's path):
 
 ```
 lessons/*/build/
@@ -92,7 +92,7 @@ A moment's `map` is one **change**:
 | `title` | the overline, top left | the rest of the lesson |
 | `lit` | the one id or edge group this moment lights; leave out for an overview | this moment |
 
-Change one thing per moment: that is what makes a map moment a Reveal.
+Change one thing per moment: that is what makes a map moment a Reveal. To clear a field set earlier, set it to `""` (`{ "laptop": { "sub": "", "state": "" } }`).
 
 The engine counts each map moment as a Cut, since each is its own page. Count Cuts for STYLE.md's pacing rules by hand: consecutive map moments are one Cut and its Reveals.
 
