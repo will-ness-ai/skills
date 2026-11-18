@@ -5,7 +5,7 @@ A lesson is watched once, then practised from memory. Everything below serves on
 ## Shape
 
 - **Two ideas at most**, 60 to 90 seconds. The opening card, the closing card and one moment per new term leave room for about two. A third idea is the next lesson.
-- **Open on a guess.** The first moment is a title card asking a question the lesson answers, in the cast's terms ("Your dev box is at home and you're in a café. What has to be open on it?"). Guessing first makes the answer stick, right or wrong.
+- **Open on a guess.** The first moment is a `guess` frame (or a title card) asking a question the lesson answers, in the cast's terms ("Your dev box is at home and you're in a café. What has to be open on it?"). Guessing first makes the answer stick, right or wrong.
 - **Close on the one thing to remember**: a title card, one sentence, the same sentence as `remember` in `lesson.json`.
 - **Stand on the lessons before.** Use what earlier lessons set up (their terms, their policy file, their commands), and never contradict it. When this lesson's command would fail under something an earlier lesson taught, show the change that makes it work.
 - **Give the reason before the mechanism**: a problem this user has, in the cast's terms, by the second moment.

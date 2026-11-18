@@ -1,6 +1,6 @@
 # The frame kit: your own pages
 
-A generated frame ([`FRAMES.md`](../FRAMES.md)) covers most moments. Write a page of your own only for a screen its types cannot show: a Claude Code session, two panes side by side, a squiggle under an error, the user's own style. Its storyboard entry takes `"html"`, and a Reveal of it is the next entry with no frame (the same page held) or a copy of the page with one thing changed.
+A generated frame ([`FRAMES.md`](../FRAMES.md)) covers most moments. Write a page of your own only for a screen its types cannot show: a squiggle under an error, a screen no type resembles, a layout of the user's own. Its storyboard entry takes `"html"`, and a Reveal of it is the next entry with no frame (the same page held) or a copy of the page with one thing changed.
 
 ```
 house.css         the contract: fonts, colours, sizes, every class below

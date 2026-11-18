@@ -274,7 +274,7 @@ const render = async ({ dir, build, moments }) => {
           if (s.textOverflow !== "ellipsis" && el.scrollWidth > el.clientWidth + 4) cut.push(`${name} (${el.scrollWidth - el.clientWidth}px cut at the right)`);
         }
         // Adjacent lit lines (one statement over three lines) are one thing.
-        const shown = [...document.querySelectorAll(".here, .spot, .node.lit, li.lit")].filter((el) => getComputedStyle(el).visibility !== "hidden");
+        const shown = [...document.querySelectorAll(".here, .spot, .lit")].filter((el) => getComputedStyle(el).visibility !== "hidden");
         const lit = shown.filter((el) => !shown.includes(el.previousElementSibling)).length;
         return { cut, lit };
       });
