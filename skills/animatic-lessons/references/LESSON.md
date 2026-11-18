@@ -24,10 +24,32 @@ What the sources do not show stays off the screen: output you would have to inve
 
 ## Pictures
 
-- **The map first.** A relationship, a path, a before-and-after: draw it as a change to the course's map ([`KIT.md`](KIT.md)). One change per moment.
+Pick the frame by what the moment shows. Fields are in [`FRAMES.md`](engine/FRAMES.md); the map in [`KIT.md`](KIT.md).
+
+| The moment shows | Frame |
+|---|---|
+| where things are and what reaches what: a path, a block, a before-and-after | the map |
+| a question to guess, or the answer | `guess` |
+| one thing to remember, a section break | `title` |
+| a few steps or boxes in a row | `diagram` |
+| who says what to whom, in order | `sequence` |
+| what happens over time, or when | `timeline` |
+| what is inside what | `stack` |
+| what belongs to what: owners, folders | `tree` |
+| what each part of one name, command or URL means | `anatomy` |
+| a few things compared on the same points | `table` |
+| an overview, a set of options, a reading order | `list` |
+| a command and its output | `terminal` |
+| the same moment on two machines | `split` |
+| an agent doing the work | `agent` |
+| a file, a config, a diff | `code` |
+| a web app's screen: where to click | `console` |
+| what the docs say | `page` |
+
+- **The map first.** When the map can carry the moment, use it: one change per moment.
 - **The picture carries the claim.** "Nobody outside can open it" is a crossed arrow from outside, where a lit box only points. Draw the mechanism the line names: the hop, the block, the label that flips.
 - **A demonstration agrees with itself.** When the story is "it's slow because it's relayed", the output on screen shows relayed, and the diagnostic shows the failing value.
-- **Name the machine.** Title each terminal with the cast member it runs on. Two machines are two terminals.
+- **Name the machine.** Title each terminal with the cast member it runs on. Two machines are two terminals, side by side in a `split`.
 - **Good and bad look different.** Colour a healthy value `ok` and a failing one `bad`.
 - **Captions own the bottom band.** Keep content above y = 930.
 
