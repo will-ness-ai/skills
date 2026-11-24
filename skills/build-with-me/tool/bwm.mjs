@@ -9,8 +9,19 @@ import { open, PHASES, STATUS, KINDS, UserError } from "./lib/store.mjs";
 import "./page/reply.js"; // sets globalThis.BWMReply: the pasted-reply format and TOON cell quoting, shared with the page
 
 const TOOL = path.dirname(fileURLToPath(import.meta.url));
-// The store sits at the project root (where the hooks look), not wherever the agent has cd'd to.
-const DIR = path.resolve(process.env.BWM_DIR ?? path.join(process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), ".build-with-me"));
+// One store per project. bwm finds an existing one by walking up from here, so running it from a
+// subfolder still reaches it; a new one goes at the project root (CLAUDE_PROJECT_DIR, else the git root).
+function findStore() {
+  if (process.env.BWM_DIR) return path.resolve(process.env.BWM_DIR);
+  let git = null;
+  for (let d = process.cwd(); ; d = path.dirname(d)) {
+    if (fs.existsSync(path.join(d, ".build-with-me", "bwm.db"))) return path.join(d, ".build-with-me");
+    if (!git && fs.existsSync(path.join(d, ".git"))) git = d;
+    if (path.dirname(d) === d) break;
+  }
+  return path.join(process.env.CLAUDE_PROJECT_DIR ?? git ?? process.cwd(), ".build-with-me");
+}
+const DIR = findStore();
 const REL = path.relative(process.cwd(), path.join(TOOL, "bwm.mjs"));
 const q = (p) => (/\s/.test(p) ? `"${p}"` : p);
 const BWM = process.env.BWM_CMD ?? `node ${q(REL.startsWith("..") ? path.join(TOOL, "bwm.mjs") : REL)}`;
@@ -45,9 +56,12 @@ const C = {
   cards: { flags: { phase: "s", status: "s", kind: "s", all: "b" }, args: "",
     about: "List cards. Done cards are left out unless --all or --status done.",
     ex: ["bwm cards", "bwm cards --phase prove --all"] },
-  ask: { flags: { "title!": "s", "topic!": "s", know: "l", option: "l", rec: "n", why: "s", flips: "s", "shape-file": "s", phase: "s" }, args: "",
-    about: "Ask the human a question. It lands in their review queue and as an open decision in the design. --option is \"<label>|<what happens if picked>\", in order; --rec is the 1-based recommended option.",
-    ex: ['bwm ask --topic "What the phone can do" --title "Should the Mac trust your Tailscale login for phone requests?" --know "Tailscale adds your login to each request" --option "Trust the login|Phone requests work; anyone on your tailnet who is you" --option "Trust the tailnet name|Simpler; any device on the tailnet can queue lessons" --rec 1 --why "Matches who should be able to spend your tokens" --flips "If you share the tailnet with family"'] },
+  ask: { flags: { "title!": "s", "topic!": "s", know: "l", option: "l", rec: "n", why: "s", flips: "s", "brief-file": "s", "read-first": "s", "shape-file": "s", phase: "s" }, args: "",
+    about: "Ask the human a question, with everything they need to decide. It lands in their queue and as an open decision. --brief-file is markdown shown above the options: open with a ```svg diagram of the choice, then what matters about it. --read-first lists the Understand cards (ids, comma-separated) to read before answering. --option is \"<label>|<what happens if picked>|<evidence: what we saw, cost, risk>\", in order; --rec is the 1-based recommended option.",
+    ex: ['bwm ask --topic "First win" --title "Which win should I deliver first?" --brief-file first-win.md --read-first 3,4 --option "Root CLAUDE.md|Every agent session starts with the team rules|Half a day; no game code touched; the 3 sessions this week each re-learned the rules" --option "Shared test command|One command runs every test|Days; first step to CI; today tests run 4 different ways" --rec 1 --why "Cheapest, and every later win builds on it" --flips "If the team already plans CI this sprint"'] },
+  reask: { flags: { "whats-new!": "s", "read-first": "s", "brief-file": "s", know: "l", option: "l", rec: "n", why: "s", flips: "s" }, args: "<question card id>",
+    about: "Ask a question again after the human said \"not sure\" or asked to be taught more: add the Understand cards they needed first, then reask with --read-first pointing at them and --whats-new saying what changed. The same card goes back to their turn; options and brief are replaced only when given.",
+    ex: ['bwm reask 6 --read-first 7,8 --whats-new "Two new cards: how agents load CLAUDE.md vs AGENTS.md, and what each win costs"'] },
   decide: { flags: { "text!": "s", why: "s", topic: "s", answer: "s" }, args: "<question card id>",
     about: "Settle the decision behind an answered question: one plain sentence for the design, and why.",
     ex: ['bwm decide 4 --text "Phone requests go through when Tailscale says they come from you." --why "Only you should spend your tokens"'] },
@@ -109,6 +123,23 @@ function withDiagram(body, file) {
   return `\`\`\`svg\n${svg.replace(/^<\?xml[^>]*>\s*/, "")}\n\`\`\`\n\n${String(body ?? "").replace(SVG_BLOCK, "")}`.trimEnd();
 }
 // Reads a file argument as text. UTF-16 (what Windows PowerShell 5.1 writes by default) is read too.
+// Understand card ids for --read-first: each must exist and be an Understand note.
+function readIds(st, v) {
+  if (!v) return [];
+  return String(v).split(/[\s,]+/).filter(Boolean).map((x) => {
+    const n = Number(x); if (!Number.isInteger(n)) throw usage(CUR, `--read-first takes card ids, got "${x}"`);
+    const c = st.card(n); if (c.phase !== "understand" || c.kind !== "note") throw new UserError(`card ${n} isn't an Understand card; --read-first points at what to read before answering`, ["bwm cards --phase understand --all"]);
+    return n;
+  });
+}
+// What a question is missing before it can teach: a brief, something to read first, evidence per option.
+function askGaps(f, readFirst) {
+  const g = [];
+  if (!f["brief-file"] && !readFirst.length) g.push("no --brief-file and no --read-first");
+  const bare = (f.option ?? []).filter((o) => !(o.split("|")[2] ?? "").trim()).length;
+  if (bare) g.push(`${bare} option(s) without evidence (the third | part)`);
+  return g;
+}
 const readArg = (p) => {
   if (!p) return undefined; if (!fs.existsSync(p)) throw new UserError(`no file at ${p}`);
   const b = fs.readFileSync(p);
@@ -121,6 +152,7 @@ const id1 = (args, what = "id") => { const n = Number(args[0]); if (!Number.isIn
 const owner = (s) => STATUS[s] ?? "-";
 
 // ---- views ----
+function noStore() { say("goal: none yet", `store: none (a new one would go at ${DIR})`); help('bwm start --title "<few words>" --goal "<one sentence>" --why "<why>" --done "<done when>"', "bwm --help"); }
 function home(st) {
   const g = st.goal();
   if (!g) { say("goal: none yet", `store: ${path.relative(process.cwd(), DIR) || DIR}`); help('bwm start --title "<few words>" --goal "<one sentence>" --why "<why>" --done "<done when>"', "bwm --help"); return; }
@@ -159,23 +191,27 @@ async function main() {
     for (const [k, s] of Object.entries(C)) say(`  ${k.padEnd(9)}${s.args ? s.args + "  " : ""}${s.about.split(". ")[0].replace(/\.$/, "")}`);
     say("Each command takes --help.", `store: ${DIR}`); return;
   }
-  const st = open(DIR);
-  if (!cmd) return home(st);
-  if (!C[cmd]) { const e = new UserError(`unknown command "${cmd}"`, ["bwm --help"]); e.code = 2; throw e; }
-  const { f, args } = parse(cmd, argv.slice(1));
+  if (cmd && !C[cmd]) { const e = new UserError(`unknown command "${cmd}"`, ["bwm --help"]); e.code = 2; throw e; }
+  const { f, args } = cmd ? parse(cmd, argv.slice(1)) : { f: {}, args: [] };
   CUR = cmd;
+  if (f.help) return cmdHelp(cmd);
+  if (!cmd) { if (!fs.existsSync(path.join(DIR, "bwm.db"))) return noStore(); return home(open(DIR)); }
   { // Reject positional words a command doesn't take: one subcommand where it has them, then at most one id.
-    const takesSub = ["card", "decision", "proof", "hooks"].includes(cmd) || cmd === "shadow" || cmd === "decide";
-    const max = cmd === "decide" ? 1 : takesSub ? 2 : 0;
+    const oneId = ["decide", "reask"].includes(cmd), takesSub = ["card", "decision", "proof", "hooks", "shadow"].includes(cmd);
+    const max = oneId ? 1 : takesSub ? 2 : 0;
     if (!f.help && args.length > max) throw usage(cmd, `unexpected argument "${args[max]}"`);
   }
-  if (f.help) return cmdHelp(cmd);
   const sub = ["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && args.length) ? args.shift() : null;
   if (["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && sub)) {
     const subs = C[cmd].args.replace(/[[\]]/g, "").split(" | ").map((x) => x.split(" ")[0]);
     if (!subs.includes(sub)) throw usage(cmd, sub ? `unknown subcommand "${sub}"` : `name a subcommand: ${subs.join(", ")}`);
   }
 
+  if (cmd === "card" && sub === "add" && (!f.phase || !f.title)) throw usage("card", "card add needs --phase and --title");
+  // Only start makes a store; everything else needs one, so no stray stores appear where bwm is run.
+  if (cmd !== "start" && !fs.existsSync(path.join(DIR, "bwm.db")))
+    throw new UserError(`no goal yet: no store at ${DIR} or above here`, ['bwm start --title "<few words>" --goal "<one sentence>" --why "<why it matters>" --done "<done when>"']);
+  const st = open(DIR);
   switch (cmd) {
     case "start": {
       const g = st.start({ title: f.title, goal: f.goal, why: f.why, ask: f.ask, done: f.done ?? [] });
@@ -228,9 +264,21 @@ async function main() {
     }
     case "ask": {
       if (!(f.option ?? []).length) say("note: no --option given; the human answers in their own words");
-      for (const o of f.option ?? []) if (!o.includes("|")) throw usage("ask", `--option takes "<label>|<what happens if picked>", got "${o}"`);
-      const id = st.ask({ title: f.title, topic: f.topic, know: f.know ?? [], options: f.option ?? [], rec: f.rec ?? null, why: f.why ?? null, flips: f.flips ?? null, shape: readArg(f["shape-file"]) ?? null, phase: f.phase ?? "decide" });
-      say(`asked: card ${id}, now in the human's queue`); return help("bwm wait", 'bwm goal --ask "<what you need from the human now>"');
+      for (const o of f.option ?? []) if (!o.includes("|")) throw usage("ask", `--option takes "<label>|<what happens if picked>|<evidence>", got "${o}"`);
+      const readFirst = readIds(st, f["read-first"]);
+      const id = st.ask({ title: f.title, topic: f.topic, know: f.know ?? [], options: f.option ?? [], rec: f.rec ?? null, why: f.why ?? null, flips: f.flips ?? null, shape: readArg(f["shape-file"]) ?? null, brief: readArg(f["brief-file"]) ?? null, readFirst, phase: f.phase ?? "decide" });
+      say(`asked: card ${id}, now in the human's queue`);
+      const gaps = askGaps(f, readFirst);
+      if (gaps.length) { say(`warning: this question doesn't teach yet: ${gaps.join("; ")}`); return help(`bwm reask ${id} --brief-file <brief.md> --read-first <understand ids> --whats-new "<what's added>"`); }
+      return help("bwm wait", 'bwm goal --ask "<what you need from the human now>"');
+    }
+    case "reask": {
+      const id = id1(args, "question card id"), c = st.card(id);
+      if (c.kind !== "question") throw new UserError(`card ${id} is a ${c.kind}, not a question`, ["bwm cards --kind question"]);
+      for (const o of f.option ?? []) if (!o.includes("|")) throw usage("reask", `--option takes "<label>|<what happens if picked>|<evidence>", got "${o}"`);
+      st.reask(id, { whatsNew: f["whats-new"], readFirst: f["read-first"] ? readIds(st, f["read-first"]) : undefined, brief: readArg(f["brief-file"]), know: f.know, options: f.option, rec: f.rec, why: f.why, flips: f.flips });
+      say(`asked again: card ${id}, back in the human's queue`);
+      return help("bwm wait", `bwm card show ${id}`);
     }
     case "decide": {
       const id = id1(args, "question card id"); const d = st.decide(id, { text: f.text, why: f.why, topic: f.topic, answer: f.answer });

@@ -18,6 +18,12 @@ The page is drawn from a store, and you change it only through the bundled `bwm`
 - **board**: five columns, *Understand, Decide, Prove, Ship, Watch*. Each holds **cards** whose
   status says whose turn it is. `answer` and `check` are the human's turn, `working` and `failed`
   are yours, and `waiting`, `expected` and `done` belong to nobody.
+  - **Understand** teaches the human the problem space: one concept per card, titled as what
+    they'll learn ("How Ballest's tests run today"). It is a curriculum, so your own tasks
+    ("Audit the tests") and recaps of what you did stay off it.
+  - **Decide** holds your questions. Each one ramps the human up on its own: a brief of the choice,
+    evidence for every option, and the Understand cards to read first.
+  - Your own work goes on your native task list, which the hooks mirror onto Prove.
 - **design**: the goal, why it matters, the done-when lines, the **ask** (what you need from the
   human right now), today vs after, a picture of the after state, and every **decision** as one
   plain sentence.
@@ -28,8 +34,9 @@ The page is drawn from a store, and you change it only through the bundled `bwm`
 
 Run the tool as `node <this skill's folder>/tool/bwm.mjs` (Node 22.13 or later), written `bwm` below.
 Its bare run shows the live state and what to do next, and `bwm <command> --help` covers each
-command. State lives in `.build-with-me/` in the working directory, so add that folder to
-`.gitignore`.
+command. State lives in `.build-with-me/` at the project root; bwm finds it from any subfolder.
+Add that folder to `.gitignore`. Keep one page per goal: when the human already has one from
+another session, ask whether to continue it before you run `bwm start` again.
 
 ## Steps
 
@@ -48,34 +55,46 @@ command. State lives in `.build-with-me/` in the working directory, so add that 
 
    Done when the human has a link and the page shows the goal, why, and done-when.
 
-2. **Catch them up.** Find the facts yourself: read the code, run commands, check docs. For each
-   thing the human must know before a decision makes sense, add an Understand card. Each card
-   opens with a **diagram** of the thing it explains: the parts and how they connect, the flow a
-   request takes, before vs after, or where the gap is. Draw it as an SVG in the page's colours and
-   attach it with `--diagram`, then add only the bullets the picture can't say
-   (`bwm card add --phase understand --title "<what it explains>" --status done --diagram flow.svg --text-file brief.md`).
-   [references/briefs.md](references/briefs.md) has the diagram kinds and the drawing rules. Done
-   when every question you're about to ask has the facts it depends on, on a card or in its
-   `--know` lines, and `bwm` reports no diagram gaps.
+2. **Catch them up.** Read [references/briefs.md](references/briefs.md) first. Find the facts
+   yourself: read the code, run commands, check docs. Then list what the human needs to understand
+   to make the coming decisions, starting from what they know today, and give each concept its own
+   Understand card:
+   - title it as what they'll learn, in their words
+   - open with a **diagram** of it (the parts and how they connect, a flow, before vs after, a gap
+     map), drawn as an SVG in the page's colours and attached with `--diagram`
+   - add only the bullets the picture can't say: numbers, names, sources, risks
+   - `bwm card add --phase understand --title "<what they'll learn>" --status done --diagram flow.svg --text-file brief.md`
 
-3. **Ask.** One decision per `bwm ask`:
+   Done when each question you're about to ask has Understand cards covering what it depends on,
+   and `bwm` reports no diagram gaps.
+
+3. **Ask.** One decision per `bwm ask`, written so the human can decide from the page alone:
    - a plain question as the title
-   - `--know` bullets with what to know first
-   - `--option "<label>|<what happens if picked>"` for each choice
-   - `--rec` with your recommendation, `--why`, and `--flips` (what would change your mind)
+   - `--brief-file`: what's being decided and why now, opening with a diagram of the options side by
+     side
+   - `--read-first`: the Understand cards it builds on
+   - `--option "<label>|<what happens if picked>|<evidence>"` for each choice, where the evidence
+     is what you saw, what it costs and what it risks
+   - `--rec` with your recommendation, `--why` backed by that evidence, and `--flips` (what would
+     change your mind)
 
-   Ask only what is the human's to decide: taste, priorities, risk, anything that changes the
-   goal. Decide the rest yourself and record it with `bwm decision add`. Set the ask line
-   (`bwm goal --ask`) to what you need and what it unblocks, then run `bwm wait` in the background
-   and keep building whatever doesn't depend on the answer. When answers arrive:
+   bwm warns when a question is missing any of these; fix it with `bwm reask`. Ask only what is
+   the human's to decide: taste, priorities, risk, anything that changes the goal. Decide the rest
+   yourself and record it with `bwm decision add`. Set the ask line (`bwm goal --ask`) to what you
+   need and what it unblocks, then run `bwm wait` in the background and keep building whatever
+   doesn't depend on the answer. When answers arrive:
    - **a pick**: settle it with `bwm decide <card> --text "<one plain sentence>" --why …`
-   - **teach me more**: add the missing Understand card, then ask again
+   - **teach me more**, or any "I don't follow" or "show me evidence": add the Understand cards
+     that answer it, then `bwm reask <card> --read-first <new ids> --whats-new "<what you added>"`.
+     The same question comes back to their turn with the new cards on top. Answer on the board,
+     not in a separate document.
    - **decide by prototype**: build the smallest thing they can try, show it as a proof with
-     `--check`, then ask again with what it taught
+     `--check`, then reask with what it taught
    - **decide by bake-off**: build two to four options, run the same checks on each, show the
-     results as proofs, then ask again
+     results as proofs, then reask
 
-   Done when every answer is settled, re-asked, or turned into a prototype or bake-off.
+   Done when every answer is settled, reasked with what was missing, or turned into a prototype or
+   bake-off.
 
 4. **Build and prove.** Every done-when line is proven by real runs, captured while they happen.
    For each claim, `bwm proof add --kind golden|edge|error|hardening` with the claim in words the

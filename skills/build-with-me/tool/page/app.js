@@ -113,10 +113,14 @@ const board = () => `<div class="board">${PH.map(column).join("")}</div>`;
 // ---- question + proof bodies ----
 function question(c) {
   const b = c.body || {}, d = drafts[c.id] ||= {};
-  const opts = (b.options || []).map((o, i) => { const [l, r] = o.split("|"); return `<label class="opt"><input type="radio" name="q${c.id}" value="${i + 1}" data-pick="${c.id}" ${String(d.pick) === String(i + 1) ? "checked" : ""}><span><b>${esc(l)}${b.rec === i + 1 ? '<span class="rec">My pick</span>' : ""}</b><small>${esc(r || "")}</small></span></label>`; }).join("");
+  const opts = (b.options || []).map((o, i) => { const [l, r, ev] = o.split("|"); return `<label class="opt"><input type="radio" name="q${c.id}" value="${i + 1}" data-pick="${c.id}" ${String(d.pick) === String(i + 1) ? "checked" : ""}><span><b>${esc(l)}${b.rec === i + 1 ? '<span class="rec">My pick</span>' : ""}</b><small>${esc(r || "")}</small>${ev ? `<small class="ev">${esc(ev)}</small>` : ""}</span></label>`; }).join("");
+  // What to read before answering: the Understand cards this question builds on, each one click away.
+  const rf = (b.read_first || []).map((id) => card(id)).filter(Boolean);
+  const readFirst = rf.length ? `<section class="sec"><h4>Read these first</h4><div class="rf">${rf.map((u) => `<button class="rfc ${u.seen_at || localSeen.has(u.id) ? "seen" : ""}" data-open="${u.id}">${icon(u.seen_at || localSeen.has(u.id) ? "done" : "expected")}<span>${esc(u.title)}</span><span class="arr">›</span></button>`).join("")}</div></section>` : "";
+  const whatsNew = b.whats_new ? `<div class="wnew"><b>Asked again</b><span>${esc(b.whats_new)}</span></div>` : "";
   const flags = [["unsure", "Not sure yet.", "Teach me more before you ask again."], ["prototype", "Decide by prototype.", "Build it quickly and let me try it."], ["bakeoff", "Decide by bake-off.", "Build several options, test them, show me results."]];
-  return `<div class="ph1"><div class="chips"><span class="stt you">${icon("answer")} Your answer</span>${b.topic ? `<span class="chip">${esc(b.topic)}</span>` : ""}</div><h2>${esc(c.title)}</h2></div>
-  <div class="cols2"><div class="stack">${(b.know || []).length ? `<section class="sec"><h4>Know this first</h4><ul class="bul">${b.know.map((k) => `<li>${inline(k)}</li>`).join("")}</ul></section>` : ""}${b.shape ? `<section class="sec"><h4>What it looks like in code</h4><pre class="shape">${esc(b.shape)}</pre></section>` : ""}</div>
+  return `<div class="ph1"><div class="chips"><span class="stt you">${icon("answer")} Your answer</span>${b.topic ? `<span class="chip">${esc(b.topic)}</span>` : ""}</div><h2>${esc(c.title)}</h2></div>${whatsNew}
+  <div class="cols2"><div class="stack">${readFirst}${b.brief ? `<section class="sec"><h4>What you're deciding</h4>${md(b.brief)}</section>` : ""}${(b.know || []).length ? `<section class="sec"><h4>Know this first</h4><ul class="bul">${b.know.map((k) => `<li>${inline(k)}</li>`).join("")}</ul></section>` : ""}${b.shape ? `<section class="sec"><h4>What it looks like in code</h4><pre class="shape">${esc(b.shape)}</pre></section>` : ""}</div>
   <div class="stack">${opts ? `<section class="sec"><h4>Options</h4><div class="opts">${opts}</div></section>` : ""}${b.why || b.flips ? `<div class="why">${b.why ? `<div><b>Why</b><span>${esc(b.why)}</span></div>` : ""}${b.flips ? `<div><b>Flips if</b><span>${esc(b.flips)}</span></div>` : ""}</div>` : ""}
   <section class="sec"><h4>Your take</h4><textarea data-take="${c.id}" placeholder="Optional. Anything I should know.">${esc(d.take || "")}</textarea></section>
   <div class="stack" style="gap:8px">${flags.map(([k, l, s]) => `<label class="chk"><input type="checkbox" data-flag="${k}" data-card="${c.id}" ${d[k] ? "checked" : ""}><span><b>${l}</b> ${s}</span></label>`).join("")}</div></div></div>`;
@@ -179,7 +183,9 @@ function openCard(id) {
   if (OWNER[c.status] === "you") { view = "queue"; qAt = needs().findIndex((x) => x.id === c.id); render(); scrollTo(0, 0); return; }
   markSeen([c.id]);
   if (c.kind === "proof") { view = "proofs"; proofSel = c.id; render(); scrollTo(0, 0); return; }
-  const b = c.kind === "question" ? `<p class="meta">${esc(c.body?.topic || "")}</p>` : c.body ? md(c.body) : "";
+  const helps = S.cards.filter((q) => q.kind === "question" && (q.body?.read_first || []).includes(c.id));
+  const b = (c.kind === "question" ? `<p class="meta">${esc(c.body?.topic || "")}</p>` : c.body ? md(c.body) : "")
+    + (helps.length ? `<section class="sec"><h4>Helps you decide</h4><div class="rf">${helps.map((q) => `<button class="rfc" data-open="${q.id}">${icon(q.status)}<span>${esc(q.title)}</span><span class="arr">›</span></button>`).join("")}</div></section>` : "");
   sheetOpen(PH.find(([p]) => p === c.phase)[1], `<div class="chips"><span class="stt">${icon(c.status)} ${SHORT[c.status]}${c.note ? ` · ${esc(c.note)}` : ""}</span></div><h2>${esc(c.title)}</h2>${b}<p class="meta">Updated ${ago(c.updated_at)}</p>`);
 }
 
