@@ -17,7 +17,8 @@ import { fileURLToPath } from "node:url";
 const quiet = () => process.exit(0);
 const out = (obj) => { process.stdout.write(JSON.stringify(obj)); process.exit(0); };
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const BWM = `node ${path.join(path.dirname(HERE), "bwm.mjs")}`;
+const BWM_PATH = path.join(path.dirname(HERE), "bwm.mjs");
+const BWM = `node ${/\s/.test(BWM_PATH) ? `"${BWM_PATH}"` : BWM_PATH}`;
 
 export const SESSION_START_LIVE = `This session keeps a build-with-me page for the human. In this session, page upkeep comes from hooks.
 - A classifier reads each human message, each batch of tool calls and each reply. When the page needs something, a hook message starting "build-with-me page:" names it and gives the bwm command.
@@ -166,6 +167,9 @@ async function main() {
     quiet();
   }
   if (!due.length) quiet();
+  // Stop ignores additionalContext: blocking the stop, with the message as the reason, is what makes
+  // the agent take another turn. stop_hook_active (checked above) keeps that to one extra turn.
+  if (event === "Stop") out({ decision: "block", reason: message(due, event) });
   out({ hookSpecificOutput: { hookEventName: event, additionalContext: message(due, event) } });
 }
 

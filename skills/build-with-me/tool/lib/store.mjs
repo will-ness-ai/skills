@@ -5,10 +5,7 @@ import path from "node:path";
 
 process.removeAllListeners("warning"); // node:sqlite prints an ExperimentalWarning on every run
 process.on("warning", (w) => { if (w.name !== "ExperimentalWarning") console.error(w.stack ?? String(w)); });
-const { DatabaseSync } = await import("node:sqlite").catch(() => {
-  console.log(`error: build-with-me needs Node 22.13 or later (node:sqlite); this is ${process.version}.`);
-  process.exit(1);
-});
+const sqlite = await import("node:sqlite").catch(() => null);
 
 export const PHASES = ["understand", "decide", "prove", "ship", "watch"];
 // Who holds each status: "you" (the human), "claude", or nobody.
@@ -83,8 +80,9 @@ export class UserError extends Error { constructor(msg, help = []) { super(msg);
 const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 
 export function open(dir) {
+  if (!sqlite) throw new UserError(`build-with-me needs Node 22.13 or later (node:sqlite); this is ${process.version}.`);
   fs.mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(path.join(dir, "bwm.db"));
+  const db = new sqlite.DatabaseSync(path.join(dir, "bwm.db"));
   db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
   const now = () => Date.now();
@@ -206,9 +204,15 @@ export function open(dir) {
     markRead(id) { q("UPDATE submissions SET read_at = ? WHERE id = ?").run(now(), id); },
     // What a submission changes on the board; returns one line per change for the agent.
     apply(sub) {
-      const out = [], p = sub.payload ?? {};
-      for (const [id, a] of Object.entries(p.answers ?? {})) {
+      const out = [], p = sub.payload && typeof sub.payload === "object" ? sub.payload : {};
+      // Mark it read first: a submission that fails to apply must not block every later one.
+      s.markRead(sub.id);
+      const answers = p.answers && typeof p.answers === "object" ? p.answers : {};
+      for (const [id, a] of Object.entries(answers)) {
         let c; try { c = s.card(Number(id)); } catch { out.push({ card: id, title: "(gone)", answer: "card no longer exists" }); continue; }
+        if (!a || typeof a !== "object") { out.push({ card: c.id, title: c.title, answer: "(unreadable answer, skipped)" }); continue; }
+        // Only the human's-turn cards take answers; an old or repeated reply leaves the rest alone.
+        if (STATUS[c.status] !== "you") { out.push({ card: c.id, title: c.title, answer: `already handled (${c.status}); skipped` }); continue; }
         const b = J(c.body, {});
         if (c.kind === "question") {
           const opt = a.pick ? b.options?.[Number(a.pick) - 1] : null;
@@ -217,18 +221,18 @@ export function open(dir) {
           const d = q("SELECT * FROM decisions WHERE card_id = ?").get(c.id);
           if (d) q("UPDATE decisions SET answer = ?, updated_at = ? WHERE id = ?").run(answer, now(), d.id);
           s.setCard(c.id, { status: "working", note: flags.includes("unsure") ? "teaching you more first" : flags.length ? `running a ${flags.includes("bakeoff") ? "bake-off" : "prototype"}` : "your answer is in" });
-          out.push({ card: c.id, title: c.title, answer });
+          out.push({ card: c.id, title: c.title, answer, flags });
         } else if (c.kind === "proof") {
           const ok = a.verdict === "ok";
           s.setCard(c.id, { status: ok ? "done" : "failed", note: ok ? "you checked it" : "you flagged it" });
           out.push({ card: c.id, title: c.title, answer: ok ? "looks right" : `something's off${a.comment ? `: "${a.comment}"` : ""}` });
         } else {
+          s.setCard(c.id, c.status === "check" ? { status: "done", note: "you checked it" } : { status: "working", note: "your answer is in" });
           out.push({ card: c.id, title: c.title, answer: a.take ?? JSON.stringify(a) });
         }
       }
-      if (p.seen?.length) s.seen(p.seen);
+      if (Array.isArray(p.seen)) s.seen(p.seen.filter(Number.isInteger));
       if (p.note) out.push({ card: "-", title: "note", answer: `"${p.note}"` });
-      s.markRead(sub.id);
       s.log(`You answered ${out.length} item${out.length === 1 ? "" : "s"}`);
       return out;
     },

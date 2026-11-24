@@ -4,7 +4,7 @@ import fs from 'node:fs';
 
 // Tool names that are the page tools themselves. Calls to these are never
 // shown to the classifier as "work", and their presence is used for debounce.
-export const PAGE_TOOL_RE = /(^|__)(page_|board_|bwm_)|build-with-me|bwm\.mjs|(^|[\s;&|])bwm\s/i;
+export const PAGE_TOOL_RE = /(^|__)(page_|board_|bwm_)|bwm\.mjs\b|(^|[\s;&|(])bwm(\s|$)/i;
 
 const clip = (s, n) => {
   s = String(s ?? '').replace(/\s+/g, ' ').trim();

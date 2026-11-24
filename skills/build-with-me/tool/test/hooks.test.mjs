@@ -83,3 +83,28 @@ test("live mode tells the agent at session start and names the bwm command for e
   assert.match(m, /^build-with-me page: your reply is sent/);
   assert.match(m, /bwm\.mjs proof step <id> --did/);
 });
+
+test("only real bwm calls count as page work", async () => {
+  const { PAGE_TOOL_RE: R } = await import("../hooks/transcript.mjs");
+  for (const yes of ["node /x/tool/bwm.mjs card set 1 --status done", "bwm proofs", "cd a && bwm wait"]) assert.ok(R.test(yes), yes);
+  for (const no of ["echo .build-with-me >> .gitignore", "cd skills/build-with-me/tool && node --test", "git add .build-with-me", "ls bwmx"]) assert.ok(!R.test(no), no);
+});
+
+test("answers apply only to cards on the human's turn, and a bad one never blocks the rest", () => {
+  const st = open(fs.mkdtempSync(path.join(os.tmpdir(), "bwm-apply-")));
+  st.start({ title: "T", goal: "G" });
+  const qid = st.ask({ title: "Which?", topic: "t", options: ["A|a", "B|b"], rec: 1 });
+  const note = st.addCard({ phase: "watch", title: "Try it on your phone", status: "check" });
+  st.submit({ answers: { [qid]: null, [note]: { take: "works" } } });
+  let lines = st.apply(st.unread()[0]);
+  assert.match(lines[0].answer, /unreadable/);
+  assert.equal(st.card(note).status, "done", "an answered check note leaves the queue");
+  assert.equal(st.unread().length, 0);
+  st.submit({ answers: { [qid]: { pick: "1" } } }); st.apply(st.unread()[0]);
+  st.decide(qid, { text: "We go with A." });
+  st.submit({ answers: { [qid]: { pick: "2" } } }); // an old reply, pasted again
+  lines = st.apply(st.unread()[0]);
+  assert.match(lines[0].answer, /already handled/);
+  assert.equal(st.card(qid).status, "done");
+  assert.equal(st.decisions()[0].answer, "picked 1: A");
+});

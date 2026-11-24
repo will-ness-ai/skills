@@ -33,7 +33,7 @@ const icon = (s, n = 14) => { const c = {answer:"var(--you)",check:"var(--you)",
   if (s === "expected") return svg(`<circle cx="7" cy="7" r="6" fill="none" stroke="${c}" stroke-width="1.4"/><path d="M4.5 7h5" stroke="${c}" stroke-width="1.4" stroke-linecap="round"/>`);
   return svg(`<circle cx="7" cy="7" r="6" fill="none" stroke="${c}" stroke-width="1.4" stroke-dasharray="2.2 2"/>`); };
 const av = (o) => `<span class="av ${o}">${o === "you" ? "Y" : "✳"}</span>`;
-const ago = (t) => { const d = new Date(t); return d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); };
+const ago = (t) => { const d = new Date(t), time = d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString([], {month:"short", day:"numeric"})}, ${time}`; };
 const card = (id) => S.cards.find((c) => c.id === Number(id));
 const isSeen = (c) => c.seen_at || localSeen.has(c.id);
 const fresh = (c) => c.status === "done" && !isSeen(c);

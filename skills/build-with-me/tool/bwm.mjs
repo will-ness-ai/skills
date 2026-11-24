@@ -8,9 +8,11 @@ import { fileURLToPath } from "node:url";
 import { open, PHASES, STATUS, KINDS, UserError } from "./lib/store.mjs";
 
 const TOOL = path.dirname(fileURLToPath(import.meta.url));
-const DIR = path.resolve(process.env.BWM_DIR ?? ".build-with-me");
+// The store sits at the project root (where the hooks look), not wherever the agent has cd'd to.
+const DIR = path.resolve(process.env.BWM_DIR ?? path.join(process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), ".build-with-me"));
 const REL = path.relative(process.cwd(), path.join(TOOL, "bwm.mjs"));
-const BWM = process.env.BWM_CMD ?? `node ${REL.startsWith("..") ? path.join(TOOL, "bwm.mjs") : REL}`;
+const q = (p) => (/\s/.test(p) ? `"${p}"` : p);
+const BWM = process.env.BWM_CMD ?? `node ${q(REL.startsWith("..") ? path.join(TOOL, "bwm.mjs") : REL)}`;
 
 // ---- output: TOON-shaped rows, key: value details, help[] blocks ----
 const out = [];
@@ -267,7 +269,7 @@ async function main() {
       if (!subs.length) { say(cmd === "wait" ? `answers: none within ${f.timeout ?? 1800} s` : "answers: none unread"); return help(cmd === "wait" ? "bwm wait" : null); }
       const lines = subs.flatMap((s) => st.apply(s));
       rows("answers", ["card", "title", "answer"], lines);
-      const qs = lines.filter((l) => typeof l.card === "number" && st.card(l.card).kind === "question" && !/unsure|prototype|bakeoff/.test(l.answer));
+      const qs = lines.filter((l) => typeof l.card === "number" && st.card(l.card).kind === "question" && l.flags && !l.flags.length);
       return help(qs.map((l) => `bwm decide ${l.card} --text "<the decision, one plain sentence>" --why "<why>"`).slice(0, 3), "bwm");
     }
     case "serve": {
