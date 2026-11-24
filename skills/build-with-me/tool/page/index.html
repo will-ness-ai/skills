@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Build With Me</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app"><p class="meta">Loading…</p></div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Details"><div class="sheeth"><span class="sl" id="sheett">Details</span><button class="btn" data-close>Close</button></div><div class="sheetb" id="sheetb"></div></aside>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Your reply"><div class="modalb"><h2>Paste this into the chat</h2><p class="meta">This page isn't connected to Claude, so your answers are copied as a reply instead.</p><textarea id="reply" readonly></textarea><div class="mrow"><button class="btn pri" id="copy">Copy</button><button class="btn" data-close>Close</button></div></div></div>
+<script>/*STATE*/</script>
+<script src="app.js"></script>
+</body>
+</html>

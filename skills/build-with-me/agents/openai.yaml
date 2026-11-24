@@ -1,0 +1,5 @@
+interface:
+  display_name: "Build With Me"
+  short_description: "Build a goal with the human on one page: catch up, decide, prove, ship"
+policy:
+  allow_implicit_invocation: false
