@@ -1,4 +1,4 @@
-# Understand cards
+# Understand cards and question briefs
 
 An Understand card gets the human from "I don't know this" to "I can decide" in one look. The
 diagram does the explaining; the bullets carry what a picture can't: numbers, names, caveats.
@@ -31,3 +31,32 @@ diagram does the explaining; the bullets carry what a picture can't: numbers, na
 
 Two to five, each one fact the picture can't show: a count, a name, a risk, a source. A card with
 no bullets is fine when the drawing says it all.
+
+## What makes an Understand card
+
+- It teaches one concept the human needs for a coming decision: how something works here, what a
+  term means, what exists and what's missing, what changed.
+- Its title is what they'll learn ("How agents pick up CLAUDE.md and AGENTS.md"), never a task you
+  did ("Audit the agent files").
+- It starts where the human is. When they're new to the area, the first cards cover the basics,
+  and the specific findings build on them.
+- A finding belongs on the card it explains ("4 tests fail today" goes on the testing card), not on
+  a card about your process.
+
+## Question briefs
+
+The question card is where the human decides, so it carries everything the decision needs:
+
+- **The brief** (`--brief-file`): a diagram of the options side by side (a comparison grid, before vs
+  after for each, or where each one lands in the system), then two to four bullets on what's being
+  decided and why it matters now.
+- **Read first** (`--read-first`): the Understand cards behind the question. Add a card for any
+  concept the brief leans on that the board doesn't teach yet.
+- **Evidence per option** (the third `|` part of `--option`): what you saw that supports or
+  undercuts it, what it costs, what it risks. "Half a day; no game code touched; 3 sessions this
+  week re-learned the rules" beats "cheap and safe".
+- **The recommendation**: `--why` points at that evidence; `--flips` names what would change it.
+
+When the human says they're unsure, they've told you what the board doesn't teach yet. Add those
+cards, then `bwm reask` with `--whats-new`.
+

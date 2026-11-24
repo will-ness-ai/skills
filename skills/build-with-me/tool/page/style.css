@@ -139,3 +139,8 @@ textarea{width:100%;min-height:64px;resize:vertical;font:inherit;color:var(--fg)
 .mrow{display:flex;gap:8px}
 .md .dia{margin:2px 0 4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
 .md .dia svg{display:block;width:100%;height:auto;max-height:420px;font-family:inherit}
+.rf{display:flex;flex-direction:column;gap:6px}
+.rfc{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font:inherit;cursor:pointer}
+.rfc:hover{border-color:var(--line2)} .rfc span:nth-child(2){flex:1} .rfc .arr{color:var(--muted)} .rfc.seen span:nth-child(2){color:var(--fg2)}
+.opt small.ev{color:var(--muted);margin-top:3px;font-size:12px}
+.wnew{display:flex;gap:8px;align-items:baseline;padding:10px 12px;border-radius:8px;background:var(--claude-soft);color:var(--fg);font-size:14px} .wnew b{color:var(--claude);white-space:nowrap}

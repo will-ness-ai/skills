@@ -157,3 +157,33 @@ test("understand cards carry a diagram, and bwm flags the ones that don't", () =
   assert.doesNotMatch(run().out, /diagram-gaps/);
   assert.equal(run("card", "set", "1", "--diagram", path.join(d, "x.txt")).code, 1);
 });
+
+test("questions teach: brief, read-first and evidence; reask brings the same card back; no stray stores", () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), "bwm-teach-")), sub = path.join(d, "src", "deep");
+  fs.mkdirSync(path.join(d, ".git")); fs.mkdirSync(sub, { recursive: true });
+  const e = { ...process.env, BWM_CMD: "bwm" }; delete e.BWM_DIR; delete e.CLAUDE_PROJECT_DIR;
+  const run = (cwd, ...a) => { const r = spawnSync(process.execPath, [path.join(TOOL, "bwm.mjs"), ...a], { encoding: "utf8", env: e, cwd }); return { out: r.stdout, code: r.status }; };
+  assert.match(run(sub, "card", "--help").out, /usage: bwm card/);
+  assert.equal(run(sub, "cards").code, 1);
+  assert.equal(fs.existsSync(path.join(sub, ".build-with-me")), false, "help and failed commands make no store");
+  assert.equal(run(sub, "start", "--title", "T", "--goal", "G").code, 0);
+  assert.ok(fs.existsSync(path.join(d, ".build-with-me", "bwm.db")), "a new store goes at the git root");
+  run(sub, "card", "add", "--phase", "understand", "--title", "How tests run today", "--status", "done", "--text", "- 4 ways");
+  run(sub, "card", "add", "--phase", "decide", "--title", "Not a concept", "--status", "done");
+  let r = run(sub, "ask", "--topic", "Win", "--title", "Which first?", "--option", "A|a", "--option", "B|b|cheap; seen twice");
+  assert.match(r.out, /warning: this question doesn't teach yet: no --brief-file and no --read-first; 1 option\(s\) without evidence/);
+  assert.equal(run(sub, "ask", "--topic", "Win", "--title", "Q", "--read-first", "2").code, 1, "read-first only takes Understand cards");
+  fs.writeFileSync(path.join(d, "brief.md"), "```svg\n<svg viewBox=\"0 0 10 10\"></svg>\n```\n\n- why now");
+  r = run(sub, "ask", "--topic", "Win", "--title", "Which win?", "--brief-file", path.join(d, "brief.md"), "--read-first", "1", "--option", "A|a|seen once", "--rec", "1");
+  assert.doesNotMatch(r.out, /warning/);
+  const st = open(path.join(d, ".build-with-me")), q = st.cards({ kind: "question" }).find((c) => c.title === "Which win?");
+  assert.deepEqual(JSON.parse(q.body).read_first, [1]); assert.match(JSON.parse(q.body).brief, /why now/);
+  st.submit({ answers: { [q.id]: { unsure: true, take: "show me evidence" } } }); st.apply(st.unread()[0]);
+  assert.equal(st.card(q.id).status, "working");
+  run(sub, "card", "add", "--phase", "understand", "--title", "What each win costs", "--status", "done", "--text", "- x");
+  r = run(sub, "reask", String(q.id), "--read-first", "5", "--whats-new", "Added what each win costs");
+  assert.equal(r.code, 0, r.out);
+  const b = JSON.parse(st.card(q.id).body);
+  assert.equal(st.card(q.id).status, "answer"); assert.deepEqual(b.read_first, [1, 5]); assert.equal(b.whats_new, "Added what each win costs"); assert.equal(b.asked, 2);
+  assert.equal(st.decisions().find((x) => x.card_id === q.id).status, "open");
+});

@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import "../page/reply.js";
 
 const R = globalThis.BWMReply;
@@ -36,10 +36,11 @@ test("rows survive a paste that lost indentation, CRLF line ends, or real line b
   assert.equal(R.parse(real).answers[3].pick, "1");
 });
 
-test("bwm import refuses a reply whose row count doesn't match, and reads UTF-16 files", () => {
+test("bwm import refuses a reply whose row count doesn't match, and reads UTF-16 files", async () => {
   bwm("start", "--title", "T", "--goal", "G");
-  const st = spawnSync(process.execPath, ["-e", `import("${path.join(TOOL, "lib", "store.mjs").replace(/\\/g, "/")}").then(({open}) => { const s = open(process.env.BWM_DIR); console.log(s.ask({ title: "Q?", topic: "t", options: ["A|a", "B|b"] })); })`], { encoding: "utf8", env });
-  const id = st.stdout.trim();
+  // Created in-process: a spawned import() of a bare Windows drive path fails (it needs a file URL).
+  const { open } = await import(pathToFileURL(path.join(TOOL, "lib", "store.mjs")).href);
+  const id = String(open(env.BWM_DIR).ask({ title: "Q?", topic: "t", options: ["A|a", "B|b"] }));
   const short = `answers[2]{card,question,pick,flags,verdict,note}:\n  ${id},Q?,1,,,\n`;
   let r = bwm("import", "--reply", short);
   assert.equal(r.code, 1); assert.match(r.out, /says 2 answer\(s\) but 1 row\(s\) read; nothing imported/);

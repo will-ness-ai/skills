@@ -152,13 +152,25 @@ export function open(dir) {
     removeCard(id) { s.card(id); q("DELETE FROM cards WHERE id = ?").run(id); q("DELETE FROM steps WHERE card_id = ?").run(id); s.touch(); },
     seen(ids) { const t = now(); for (const id of ids) q("UPDATE cards SET seen_at = ? WHERE id = ? AND seen_at IS NULL").run(t, id); },
 
-    ask({ title, topic, know = [], options = [], rec = null, why = null, flips = null, shape = null, phase = "decide" }) {
+    ask({ title, topic, know = [], options = [], rec = null, why = null, flips = null, shape = null, brief = null, readFirst = [], phase = "decide" }) {
       if (options.length && rec !== null && !(rec >= 1 && rec <= options.length)) throw new UserError(`--rec ${rec} is not one of the ${options.length} options`);
-      const id = s.addCard({ phase, kind: "question", title, status: "answer", note: "your answer", body: { topic, know, options, rec, why, flips, shape } });
+      const id = s.addCard({ phase, kind: "question", title, status: "answer", note: "your answer", body: { topic, know, options, rec, why, flips, shape, brief, read_first: readFirst, asked: 1 } });
       const t = now(), g = s.goal();
       q("INSERT INTO decisions (goal_id, topic, text, status, asked, card_id, created_at, updated_at) VALUES (?, ?, ?, 'open', ?, ?, ?, ?)").run(g.id, topic, title, title, id, t, t);
       s.log(`Asked: ${title}`);
       return id;
+    },
+    // Ask the same question again, after the human asked to be taught more. Fields left undefined stay.
+    reask(id, { whatsNew, readFirst, brief, know, options, rec, why, flips }) {
+      const c = s.card(id), b = J(c.body, {});
+      const next = { ...b, whats_new: whatsNew, asked: (b.asked ?? 1) + 1 };
+      if (readFirst) next.read_first = [...new Set([...(b.read_first ?? []), ...readFirst])];
+      for (const [k, v] of Object.entries({ brief, know, options, rec, why, flips })) if (v !== undefined && v !== null) next[k] = v;
+      if (next.options?.length && next.rec != null && !(next.rec >= 1 && next.rec <= next.options.length)) throw new UserError(`--rec ${next.rec} is not one of the ${next.options.length} options`);
+      s.setCard(id, { status: "answer", note: "asked again", body: next });
+      const d = q("SELECT * FROM decisions WHERE card_id = ?").get(id);
+      if (d) q("UPDATE decisions SET status = 'open', answer = NULL, updated_at = ? WHERE id = ?").run(now(), d.id);
+      s.log(`Asked again: ${c.title}`);
     },
     decisions() { const g = s.goal(); return g ? q("SELECT * FROM decisions WHERE goal_id = ? ORDER BY CASE status WHEN 'settled' THEN 0 WHEN 'open' THEN 1 ELSE 2 END, id").all(g.id) : []; },
     decision(id) { const d = q("SELECT * FROM decisions WHERE id = ?").get(id); if (!d) throw new UserError(`no decision ${id}`, ["bwm design"]); return d; },
