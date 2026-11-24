@@ -174,7 +174,7 @@ function payload() {
 const tcell = (v) => { v = v == null ? "" : String(v); return /[,:"\\\n]/.test(v) ? `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n")}"` : v; };
 function toonReply(p) {
   const rows = Object.entries(p.answers).map(([id, a]) => [id, card(Number(id))?.title, a.pick, ["unsure", "prototype", "bakeoff"].filter((f) => a[f]).join(" "), a.verdict, a.take ?? a.comment].map(tcell).join(","));
-  return [`My build-with-me answers (Claude: pass all of this to bwm import --reply):`, `answers[${rows.length}]{card,question,pick,flags,verdict,note}:`, ...rows.map((r) => `  ${r}`), ...(p.seen.length ? [`seen: ${p.seen.join(" ")}`] : [])].join("\n");
+  return [`My build-with-me answers (Claude: save this to a file and run bwm import --reply-file <path>):`, `answers[${rows.length}]{card,question,pick,flags,verdict,note}:`, ...rows.map((r) => `  ${r}`), ...(p.seen.length ? [`seen: ${p.seen.join(" ")}`] : [])].join("\n");
 }
 async function submit() {
   const p = payload(); if (!Object.keys(p.answers).length) return;
