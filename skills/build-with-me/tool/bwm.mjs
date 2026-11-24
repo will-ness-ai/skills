@@ -59,7 +59,7 @@ const C = {
     about: "Record proof. Kinds: golden, edge, error, hardening. Each step says what you did, what should happen and what did, with evidence (a screenshot or video path, or captured terminal output). A control is a run that should fail (or succeed) to show the test can tell the difference. pass --check hands it to the human to verify.",
     ex: ['bwm proof add --kind hardening --title "The internet can\'t reach it" --claim "Nothing outside your tailnet reaches the site"', 'bwm proof step 9 --did "curl the site from a cloud VM" --expected "Name does not resolve" --got "Could not resolve host" --term-file /tmp/curl.txt', 'bwm proof control 9 --did "Same curl from your phone" --expected "Works" --got "HTTP/2 200" --term "HTTP/2 200"', "bwm proof pass 9", "bwm proof pass 8 --check"] },
   proofs: { flags: {}, args: "", about: "The coverage map: every proof by kind, so gaps show.", ex: ["bwm proofs"] },
-  import: { flags: { "reply!": "s" }, args: "", about: "Record answers the human pasted into chat from a rendered page (the answers[N] rows), then apply them like wait does.", ex: ["bwm import --reply $'answers[1]{card,question,pick,flags,verdict,note}:\\n  4,Ship it?,1,,,'"] },
+  import: { flags: { reply: "s", "reply-file": "s" }, args: "", about: "Record answers the human pasted into chat from a rendered page (the answers[N] rows), then apply them like wait does.", ex: ["bwm import --reply-file reply.txt   (write the human's paste to the file first: no shell quoting)", "bwm import --reply '<the answers rows>'"] },
   answers: { flags: {}, args: "", about: "Apply the human's unread submissions to the board and print them. wait does this when one arrives.", ex: ["bwm answers"] },
   wait: { flags: { timeout: "n" }, args: "", about: "Wait for the human to submit from the page, then apply and print their answers. Run it in the background. Default timeout 1800 s.", ex: ["bwm wait", "bwm wait --timeout 600"] },
   serve: { flags: { port: "n" }, args: "", about: "Serve the live page on localhost, with Submit wired to this store. Run it in the background; it prints its URL.", ex: ["bwm serve", "bwm serve --port 4848"] },
@@ -106,16 +106,21 @@ function parseReply(text) {
   const lines = text.split(/\r?\n/), h = lines.findIndex((l) => /^answers\[\d+\]\{[^}]*\}:\s*$/.test(l.trim()));
   if (h < 0) return null;
   const fields = lines[h].trim().match(/\{([^}]*)\}/)[1].split(","), answers = {};
-  for (const l of lines.slice(h + 1)) {
-    if (!/^\s+\S/.test(l)) break;
-    const cells = []; let cur = "", q = false, i = 0, s = l.trim();
-    for (; i < s.length; i++) {
-      const ch = s[i];
-      if (q) { if (ch === "\\" && i + 1 < s.length) { const n = s[++i]; cur += n === "n" ? "\n" : n; } else if (ch === '"') q = false; else cur += ch; }
-      else if (ch === '"') q = true; else if (ch === ",") { cells.push(cur); cur = ""; } else cur += ch;
-    }
-    cells.push(cur);
-    const r = Object.fromEntries(fields.map((k, n) => [k, cells[n] ?? ""])), a = {};
+  // Rows are read character by character, so a line break inside a quoted value (a shell that turned
+  // \n back into a real newline, say) stays part of that value instead of ending the row.
+  const body = lines.slice(h + 1).join("\n"), rows = [];
+  let cells = [], cur = "", q = false, started = false;
+  const endRow = () => { if (started) { cells.push(cur); rows.push(cells); } cells = []; cur = ""; started = false; };
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (q) { if (ch === "\\" && i + 1 < body.length) { const n = body[++i]; cur += n === "n" ? "\n" : n; } else if (ch === '"') q = false; else cur += ch; continue; }
+    if (ch === "\n") { endRow(); if (!/^\s/.test(body.slice(i + 1, i + 2) || "x")) break; continue; }
+    if (!started) { if (/\s/.test(ch)) continue; started = true; }
+    if (ch === '"') q = true; else if (ch === ",") { cells.push(cur); cur = ""; } else cur += ch;
+  }
+  endRow();
+  for (const c of rows) {
+    const r = Object.fromEntries(fields.map((k, n) => [k, c[n] ?? ""])), a = {};
     if (r.pick) a.pick = r.pick;
     for (const fl of (r.flags || "").split(/\s+/).filter(Boolean)) a[fl] = true;
     if (r.verdict) { a.verdict = r.verdict; if (r.note) a.comment = r.note; } else if (r.note) a.take = r.note;
@@ -284,7 +289,8 @@ async function main() {
       return;
     }
     case "import": {
-      const p = parseReply(f.reply);
+      if (!f.reply && !f["reply-file"]) throw usage("import", "pass --reply-file <path> (or --reply <text>)");
+      const p = parseReply(f["reply-file"] ? readArg(f["reply-file"]) : f.reply);
       if (!p) throw new UserError("couldn't read the reply: pass everything from the answers[N] line on");
       st.submit(p);
     } // falls through: apply it now

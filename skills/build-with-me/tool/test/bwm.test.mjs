@@ -121,7 +121,7 @@ test("import takes the reply pasted from a rendered page", () => {
   const st = open(env.BWM_DIR);
   const id = st.ask({ title: "Paste me?", topic: "Paste", options: ["Yes|y"] });
   const q2 = st.ask({ title: "What first?", topic: "Scope", options: ["A|a", "B|b", "C|c", "Unsure|u"] });
-  const reply = `My build-with-me answers (Claude: pass all of this to bwm import --reply):\nanswers[2]{card,question,pick,flags,verdict,note}:\n  ${id},Paste me?,1,,,\n  ${q2},What first?,4,unsure,,"Research first: a lot changed.\\n- improve testing\\n- say \\"why\\", too"\nseen: 1`;
+  const reply = `My build-with-me answers (Claude: save this to a file and run bwm import --reply-file <path>):\nanswers[2]{card,question,pick,flags,verdict,note}:\n  ${id},Paste me?,1,,,\n  ${q2},What first?,4,unsure,,"Research first: a lot changed.\\n- improve testing\\n- say \\"why\\", too"\nseen: 1`;
   let r = bwm("import", "--reply", reply);
   assert.equal(r.code, 0); assert.match(r.out, /Paste me\?,"picked 1: Yes"/);
   assert.ok(r.out.includes(String.raw`7,What first?,"picked 4: Unsure; unsure; \"Research first: a lot changed.\n- improve testing\n- say \"why\", too\""`.replace("7,", `${q2},`)), r.out);
@@ -129,5 +129,13 @@ test("import takes the reply pasted from a rendered page", () => {
   const q3 = st.ask({ title: "Old form?", topic: "Paste", options: ["Yes|y"] });
   r = bwm("import", "--reply", `bwm-answers {"answers":{"${q3}":{"pick":"1"}},"seen":[]}`);
   assert.match(r.out, /Old form\?,"picked 1: Yes"/, "the older JSON line still imports");
+  // A shell (bash $'…', or a paste that lost its escapes) can turn \n into real line breaks.
+  const q4 = st.ask({ title: "Multi-line?", topic: "Paste", options: ["Yes|y"] });
+  const f = path.join(dir, "reply.txt");
+  fs.writeFileSync(f, `answers[1]{card,question,pick,flags,verdict,note}:\n  ${q4},Multi-line?,1,,,"Research first.\nBy early value: remember.\n- improve testing\n- remove slop"\nseen: 1\n`);
+  r = bwm("import", "--reply-file", f);
+  assert.equal(r.code, 0, r.out);
+  assert.equal(st.decisions().find((d) => d.card_id === q4).answer, 'picked 1: Yes; "Research first.\nBy early value: remember.\n- improve testing\n- remove slop"');
+  assert.equal(bwm("import").code, 2, "needs --reply-file or --reply");
   assert.equal(bwm("import", "--reply", "nothing here").code, 1);
 });
