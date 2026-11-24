@@ -33,7 +33,8 @@ export async function check(st, { tool, dir, url }) {
       if (name !== "desktop-dark") {
         if (await p.$("[data-queue]")) { await p.click("[data-queue]"); await p.waitForTimeout(150); await shoot(`${name}-queue`); await p.click("[data-board]"); }
         const proof = await p.$('[data-open]:is(.kt)');
-        const proofId = await p.evaluate(() => { const s = window.BWM_STATE; const c = s && s.cards.find((x) => x.kind === "proof" && x.status !== "check"); return c ? c.id : null; });
+        // A rendered file carries its state; a live page serves it from api/state.
+        const proofId = await p.evaluate(async () => { const s = window.BWM_STATE || await fetch("api/state").then((r) => r.json()).catch(() => null); const c = s && s.cards.find((x) => x.kind === "proof" && x.status !== "check"); return c ? c.id : null; });
         if (proof && proofId) { await p.click(`[data-open="${proofId}"]`).catch(() => {}); await p.waitForTimeout(150); if (await p.$(".cov")) await shoot(`${name}-proofs`); }
       }
       await p.close();

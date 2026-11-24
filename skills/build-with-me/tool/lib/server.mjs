@@ -21,7 +21,7 @@ export function serve(st, { port = 4848, page }) {
       }
       if (req.method === "GET" && url.pathname.startsWith("/api/file/")) {
         const id = Number(url.pathname.split("/").pop());
-        const row = st.db.prepare("SELECT evidence FROM steps WHERE id = ?").get(id);
+        const row = st.step(id);
         if (!row?.evidence || !fs.existsSync(row.evidence)) return send(res, 404, { error: "no file" });
         return send(res, 200, fs.readFileSync(row.evidence), MIME[path.extname(row.evidence).toLowerCase()] ?? "application/octet-stream");
       }

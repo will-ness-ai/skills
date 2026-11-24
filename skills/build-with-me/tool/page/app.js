@@ -13,15 +13,17 @@ let view = "board", qAt = 0, proofSel = null, openDone = {}, drafts = {}, sent =
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-// A ```svg block in a card draws as a diagram. Scripts, foreign content and event handlers are dropped.
-const diagram = (src) => {
+// Every SVG the agent supplies (card diagrams, the goal picture) passes through here: scripts, foreign
+// content, event handlers and outside links are dropped. Returns null when it isn't an SVG.
+const cleanSvg = (src) => {
   const doc = new DOMParser().parseFromString(src, "image/svg+xml"), svg = doc.documentElement;
-  if (svg.nodeName !== "svg" || doc.querySelector("parsererror")) return `<pre>${esc(src)}</pre>`;
-  svg.querySelectorAll("script,foreignObject,iframe,object,embed").forEach((n) => n.remove());
-  for (const n of [svg, ...svg.querySelectorAll("*")]) for (const a of [...n.attributes]) if (/^on/i.test(a.name) || (/href$/i.test(a.name) && !/^#/.test(a.value))) n.removeAttribute(a.name);
+  if (svg.nodeName !== "svg" || doc.querySelector("parsererror")) return null;
+  svg.querySelectorAll("script,style,foreignObject,iframe,object,embed,animate,set,animateMotion,animateTransform").forEach((n) => n.remove());
+  for (const n of [svg, ...svg.querySelectorAll("*")]) for (const a of [...n.attributes]) if (/^on/i.test(a.name) || (/href$/i.test(a.name) && !/^#/.test(a.value)) || (a.name === "style" && /url\s*\(/i.test(a.value))) n.removeAttribute(a.name);
   svg.removeAttribute("width"); svg.removeAttribute("height"); svg.setAttribute("role", "img");
-  return `<figure class="dia">${svg.outerHTML}</figure>`;
+  return svg;
 };
+const diagram = (src) => { const svg = cleanSvg(src); return svg ? `<figure class="dia">${svg.outerHTML}</figure>` : `<pre>${esc(src)}</pre>`; };
 const md = (s) => { const out = []; let list = null, code = null;
   for (const line of String(s ?? "").split("\n")) {
     if (line.startsWith("```")) { if (code) { out.push(code.svg ? diagram(code.join("\n")) : `<pre>${esc(code.join("\n"))}</pre>`); code = null; } else { code = []; code.svg = /^```svg\s*$/.test(line); } continue; }
@@ -47,7 +49,7 @@ const card = (id) => S.cards.find((c) => c.id === Number(id));
 const isSeen = (c) => c.seen_at || localSeen.has(c.id);
 const fresh = (c) => c.status === "done" && !isSeen(c);
 const needs = () => S.cards.filter((c) => OWNER[c.status] === "you");
-const answered = (c) => { const d = drafts[c.id]; if (!d) return false; return c.kind === "proof" ? !!d.verdict : !!(d.pick || d.take || d.unsure || d.prototype || d.bakeoff); };
+const answered = (c) => { const d = drafts[c.id]; if (!d) return false; return c.kind === "proof" || (c.kind === "note" && c.status === "check") ? !!d.verdict : !!(d.pick || d.take || d.unsure || d.prototype || d.bakeoff); };
 
 // ---- seen ----
 function markSeen(ids) {
@@ -73,9 +75,11 @@ function decRow(d, N) {
 }
 function picture(N) {
   const g = S.goal; if (!g.picture) return "";
-  const vb = (g.picture.match(/viewBox="([\d.\s-]+)"/) || [])[1]?.trim().split(/\s+/).map(Number);
-  const pins = vb ? S.decisions.filter((d) => d.pin_x !== null && d.status !== "next").map((d) => `<button class="pin ${d.status}" style="left:${((d.pin_x - vb[0]) / vb[2] * 100).toFixed(2)}%;top:${((d.pin_y - vb[1]) / vb[3] * 100).toFixed(2)}%" data-dec="${d.id}" title="${esc(d.text)}">${d.status === "open" ? "?" : N[d.id]}</button>`).join("") : "";
-  return `<div class="pic">${g.picture.replace(/<script[\s\S]*?<\/script>/gi, "")}${pins}</div>`;
+  const svg = cleanSvg(g.picture); if (!svg) return "";
+  const vb = (svg.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some((n) => !Number.isFinite(n)) || !vb[2] || !vb[3]) vb.length = 0;
+  const pins = vb.length ? S.decisions.filter((d) => d.pin_x !== null && d.status !== "next").map((d) => `<button class="pin ${d.status}" style="left:${((d.pin_x - vb[0]) / vb[2] * 100).toFixed(2)}%;top:${((d.pin_y - vb[1]) / vb[3] * 100).toFixed(2)}%" data-dec="${d.id}" title="${esc(d.text)}">${d.status === "open" ? "?" : N[d.id]}</button>`).join("") : "";
+  return `<div class="pic">${svg.outerHTML}${pins}</div>`;
 }
 function bandView() {
   const g = S.goal, n = needs().length, N = numbers();
@@ -117,6 +121,13 @@ function question(c) {
   <section class="sec"><h4>Your take</h4><textarea data-take="${c.id}" placeholder="Optional. Anything I should know.">${esc(d.take || "")}</textarea></section>
   <div class="stack" style="gap:8px">${flags.map(([k, l, s]) => `<label class="chk"><input type="checkbox" data-flag="${k}" data-card="${c.id}" ${d[k] ? "checked" : ""}><span><b>${l}</b> ${s}</span></label>`).join("")}</div></div></div>`;
 }
+// A note card on the human's turn: its text, then a verdict (for a check) or a reply box.
+function noteAsk(c) {
+  const d = drafts[c.id] ||= {}, check = c.status === "check";
+  const verdict = check ? `<section class="vbox"><h4>Your check</h4><div class="seg">${[["ok", "Looks right"], ["off", "Something's off"]].map(([v, l]) => `<button data-verdict="${v}" data-card="${c.id}" class="${v}" aria-pressed="${d.verdict === v}">${l}</button>`).join("")}</div>${d.verdict === "off" ? `<textarea data-comment="${c.id}" placeholder="What looks wrong?">${esc(d.comment || "")}</textarea>` : ""}</section>`
+    : `<section class="sec"><h4>Your answer</h4><textarea data-take="${c.id}" placeholder="Your answer">${esc(d.take || "")}</textarea></section>`;
+  return `<div class="ph1"><div class="chips"><span class="stt you">${icon(c.status)} ${check ? "Your check" : "Your answer"}</span></div><h2>${esc(c.title)}</h2></div>${c.body ? md(c.body) : ""}${verdict}`;
+}
 function evidence(s) {
   if (s.src && /^(data:image|.*\.(png|jpe?g|gif|webp|svg)$)/i.test(s.src + (s.evidence || ""))) return `<figure class="ev evbox"><img src="${esc(s.src)}" alt="${esc(s.did)}" loading="lazy"><figcaption>${esc(s.did)}</figcaption></figure>`;
   if (s.src && /^(data:video|.*\.(mp4|webm|mov)$)/i.test(s.src + (s.evidence || ""))) return `<figure class="ev evbox"><video src="${esc(s.src)}" controls preload="metadata"></video><figcaption>${esc(s.did)}</figcaption></figure>`;
@@ -142,7 +153,7 @@ function proofBody(c, withBack) {
 function queueView() {
   const ns = needs(); if (!ns.length) { view = "board"; return main(); }
   qAt = Math.min(qAt, ns.length - 1); const c = ns[qAt];
-  return `<div class="panel"><div class="qtop"><button class="btn" data-board>← Board</button><div class="qprog">${ns.map((x, i) => `<span class="${answered(x) ? "d" : i === qAt ? "c" : ""}"></span>`).join("")}</div><span class="meta">${qAt + 1} of ${ns.length}</span></div>${c.kind === "proof" ? proofBody(c) : question(c)}<div class="pfoot"><button class="btn" data-qprev ${qAt ? "" : "disabled"}>Back</button><span class="sp"></span>${qAt < ns.length - 1 ? `<button class="btn pri" data-qnext>Next →</button>` : `<button class="btn pri" data-submit ${ns.some(answered) ? "" : "disabled"}>${sent ? "Sent ✓" : "Submit to Claude"}</button>`}</div></div>`;
+  return `<div class="panel"><div class="qtop"><button class="btn" data-board>← Board</button><div class="qprog">${ns.map((x, i) => `<span class="${answered(x) ? "d" : i === qAt ? "c" : ""}"></span>`).join("")}</div><span class="meta">${qAt + 1} of ${ns.length}</span></div>${c.kind === "proof" ? proofBody(c) : c.kind === "question" ? question(c) : noteAsk(c)}<div class="pfoot"><button class="btn" data-qprev ${qAt ? "" : "disabled"}>Back</button><span class="sp"></span>${qAt < ns.length - 1 ? `<button class="btn pri" data-qnext>Next →</button>` : `<button class="btn pri" data-submit ${ns.some(answered) ? "" : "disabled"}>${sent ? "Sent ✓" : "Submit to Claude"}</button>`}</div></div>`;
 }
 function proofsView() {
   const ps = S.cards.filter((c) => c.kind === "proof"); const sel = card(proofSel) || ps[0];
@@ -178,13 +189,6 @@ function payload() {
   for (const c of needs()) if (answered(c)) answers[c.id] = drafts[c.id];
   return { answers, seen: LIVE ? [] : [...localSeen] };
 }
-// The pasted reply is TOON rows, like bwm's own output: each answer once, readable by the human and
-// parsed by bwm import. Values holding a comma, colon, quote or line break are quoted, with \" and \n.
-const tcell = (v) => { v = v == null ? "" : String(v); return /[,:"\\\n]/.test(v) ? `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n")}"` : v; };
-function toonReply(p) {
-  const rows = Object.entries(p.answers).map(([id, a]) => [id, card(Number(id))?.title, a.pick, ["unsure", "prototype", "bakeoff"].filter((f) => a[f]).join(" "), a.verdict, a.take ?? a.comment].map(tcell).join(","));
-  return [`My build-with-me answers (Claude: save this to a file and run bwm import --reply-file <path>):`, `answers[${rows.length}]{card,question,pick,flags,verdict,note}:`, ...rows.map((r) => `  ${r}`), ...(p.seen.length ? [`seen: ${p.seen.join(" ")}`] : [])].join("\n");
-}
 async function submit() {
   const p = payload(); if (!Object.keys(p.answers).length) return;
   if (LIVE) {
@@ -194,7 +198,7 @@ async function submit() {
     else if (t) { t.style.color = "var(--bad)"; t.textContent = "Couldn't reach Claude's page server. Is bwm serve still running?"; }
     render(); return;
   }
-  document.getElementById("reply").value = toonReply(p);
+  document.getElementById("reply").value = BWMReply.encode(p.answers, Object.fromEntries(Object.keys(p.answers).map((id) => [id, card(Number(id))?.title])), p.seen);
   modal.hidden = false;
 }
 
@@ -237,9 +241,11 @@ async function poll() {
   try {
     const r = await fetch("api/state", {cache:"no-store"}); if (!r.ok) return;
     const next = await r.json(), s2 = JSON.stringify(next);
-    if (s2 === sig) return; sig = s2; S = next;
+    if (s2 === sig) return;
+    // Hold the new state back while the human types or a sheet is open; the next poll draws it.
     const busy = document.activeElement && ["TEXTAREA", "INPUT"].includes(document.activeElement.tagName);
-    if (!busy && sheet.hidden) render();
+    if (busy || !sheet.hidden) return;
+    sig = s2; S = next; render();
   } catch {}
 }
 band = ls.get("bwm-band", true);

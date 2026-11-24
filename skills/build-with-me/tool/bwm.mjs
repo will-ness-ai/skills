@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { open, PHASES, STATUS, KINDS, UserError } from "./lib/store.mjs";
+import "./page/reply.js"; // sets globalThis.BWMReply: the pasted-reply format and TOON cell quoting, shared with the page
 
 const TOOL = path.dirname(fileURLToPath(import.meta.url));
 // The store sits at the project root (where the hooks look), not wherever the agent has cd'd to.
@@ -17,8 +18,8 @@ const BWM = process.env.BWM_CMD ?? `node ${q(REL.startsWith("..") ? path.join(TO
 // ---- output: TOON-shaped rows, key: value details, help[] blocks ----
 const out = [];
 const say = (...l) => out.push(...l);
-// Line breaks survive as \n inside a quoted value, so a human's bullet list reaches the agent intact.
-const cell = (v) => { v = v === null || v === undefined ? "" : String(v).replace(/\r?\n/g, "\n").replace(/[ \t]+/g, " ").trim(); return /[,:"\\\n]/.test(v) ? `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"` : v; };
+// Line breaks and indentation survive (as \n inside a quoted value), so a human's nested bullets reach the agent intact.
+const cell = (v) => globalThis.BWMReply.cell(v);
 const rows = (name, fields, list, total) => {
   if (!list.length) return say(`${name}: none`);
   say(`${name}[${list.length}${total !== undefined && total !== list.length ? ` of ${total}` : ""}]{${fields.join(",")}}:`);
@@ -39,7 +40,7 @@ const C = {
     about: "Show or change the goal, the ask, today vs after, the picture (an SVG file), and the done-when lines.",
     ex: ['bwm goal --ask "One decision and one check from you, then I can mark the PR ready."', 'bwm goal --today "The site only answers on the Mac" --after "Your phone reaches it over the private link"', "bwm goal --done-state 2=done"] },
   card: { flags: { phase: "s", title: "s", status: "s", note: "s", text: "s", "text-file": "s", diagram: "s", full: "b" }, args: "add | set <id> | show <id>",
-    about: "Add, change or show a board card. --diagram <file.svg> puts a drawing at the top of the card (it replaces any drawing already there); draw with the page's colours: var(--fg), var(--muted), var(--panel), var(--line2), var(--claude), var(--ok), var(--bad), var(--you). Phases: understand, decide, prove, ship, watch. Statuses: answer and check (the human's turn), working and failed (yours), waiting, expected, done.",
+    about: "Add, change or show a board card. --diagram <file.svg> puts a drawing at the top of the card (it replaces any drawing already there); draw it with the page's colours (the list is in the skill's references/briefs.md). Phases: understand, decide, prove, ship, watch. Statuses: answer and check (the human's turn), working and failed (yours), waiting, expected, done.",
     ex: ['bwm card add --phase understand --title "How Tailscale serve works" --status done --diagram serve.svg --text-file brief.md', 'bwm card set 7 --status failed --note "fixing 1 file"', "bwm card show 7"] },
   cards: { flags: { phase: "s", status: "s", kind: "s", all: "b" }, args: "",
     about: "List cards. Done cards are left out unless --all or --status done.",
@@ -98,48 +99,25 @@ function cmdHelp(cmd) {
   say(`usage: bwm ${cmd}${s.args ? " " + s.args : ""} ${Object.entries(s.flags).map(([k, t]) => { const n = k.replace("!", ""); const v = t === "b" ? "" : t === "l" ? ` <${n}>…` : ` <${n}>`; return k.endsWith("!") ? `--${n}${v}` : `[--${n}${v}]`; }).join(" ")}`.trimEnd());
   say(s.about, "examples:"); for (const e of s.ex) say(`  ${e.replace(/^bwm/, BWM)}`);
 }
-// The reply a rendered page copies: TOON rows (answers[N]{card,question,pick,flags,verdict,note}:)
-// plus an optional "seen: 1 2" line. The older one-line JSON form (bwm-answers {...}) still reads.
-function parseReply(text) {
-  const j = text.match(/bwm-answers\s+(\{[\s\S]*\})/);
-  if (j) { try { const p = JSON.parse(j[1]); return { answers: p.answers ?? {}, seen: p.seen ?? [] }; } catch { return null; } }
-  const lines = text.split(/\r?\n/), h = lines.findIndex((l) => /^answers\[\d+\]\{[^}]*\}:\s*$/.test(l.trim()));
-  if (h < 0) return null;
-  const fields = lines[h].trim().match(/\{([^}]*)\}/)[1].split(","), answers = {};
-  // Rows are read character by character, so a line break inside a quoted value (a shell that turned
-  // \n back into a real newline, say) stays part of that value instead of ending the row.
-  const body = lines.slice(h + 1).join("\n"), rows = [];
-  let cells = [], cur = "", q = false, started = false;
-  const endRow = () => { if (started) { cells.push(cur); rows.push(cells); } cells = []; cur = ""; started = false; };
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i];
-    if (q) { if (ch === "\\" && i + 1 < body.length) { const n = body[++i]; cur += n === "n" ? "\n" : n; } else if (ch === '"') q = false; else cur += ch; continue; }
-    if (ch === "\n") { endRow(); if (!/^\s/.test(body.slice(i + 1, i + 2) || "x")) break; continue; }
-    if (!started) { if (/\s/.test(ch)) continue; started = true; }
-    if (ch === '"') q = true; else if (ch === ",") { cells.push(cur); cur = ""; } else cur += ch;
-  }
-  endRow();
-  for (const c of rows) {
-    const r = Object.fromEntries(fields.map((k, n) => [k, c[n] ?? ""])), a = {};
-    if (r.pick) a.pick = r.pick;
-    for (const fl of (r.flags || "").split(/\s+/).filter(Boolean)) a[fl] = true;
-    if (r.verdict) { a.verdict = r.verdict; if (r.note) a.comment = r.note; } else if (r.note) a.take = r.note;
-    answers[r.card] = a;
-  }
-  const seen = (text.match(/^seen:\s*(.*)$/m)?.[1] ?? "").split(/[\s,]+/).filter(Boolean).map(Number).filter(Number.isInteger);
-  return { answers, seen };
-}
 // A card's drawing is a ```svg block at the top of its body; the page draws it in the theme's colours.
 const SVG_BLOCK = /^```svg\n[\s\S]*?\n```\n*/;
-const hasDiagram = (body) => /```svg\n/.test(body ?? "");
+const hasDiagram = (body) => /^\s*```svg\n/.test(body ?? "");
 function withDiagram(body, file) {
   if (!file) return body;
   const svg = readArg(file).trim();
-  if (!/^(<\?xml[^>]*>\s*)?<svg[\s>]/.test(svg)) throw new UserError(`${file} is not an SVG (it should start with <svg)`);
+  if (!/^(<\?xml[^>]*>\s*)?<svg[\s>]/.test(svg)) throw new UserError(`${file} is not an SVG: the file should start with <svg viewBox="0 0 W H"> (see references/briefs.md)`, ["bwm card set <id> --diagram <drawing.svg>"]);
   return `\`\`\`svg\n${svg.replace(/^<\?xml[^>]*>\s*/, "")}\n\`\`\`\n\n${String(body ?? "").replace(SVG_BLOCK, "")}`.trimEnd();
 }
-const readArg = (p) => { if (!p) return undefined; if (!fs.existsSync(p)) throw new UserError(`no file at ${p}`); return fs.readFileSync(p, "utf8"); };
-const id1 = (args, what = "id") => { const n = Number(args[0]); if (!Number.isInteger(n)) throw new UserError(`name a ${what}`); return n; };
+// Reads a file argument as text. UTF-16 (what Windows PowerShell 5.1 writes by default) is read too.
+const readArg = (p) => {
+  if (!p) return undefined; if (!fs.existsSync(p)) throw new UserError(`no file at ${p}`);
+  const b = fs.readFileSync(p);
+  if (b[0] === 0xff && b[1] === 0xfe) return b.subarray(2).toString("utf16le");
+  if (b[0] === 0xfe && b[1] === 0xff) { const s = Buffer.from(b.subarray(2)); s.swap16(); return s.toString("utf16le"); }
+  return b.toString("utf8").replace(/^\uFEFF/, "");
+};
+let CUR = null; // the command running, so an id error can print its usage
+const id1 = (args, what = "id") => { const n = Number(args[0]); if (!Number.isInteger(n)) throw usage(CUR, args[0] === undefined ? `name a ${what}` : `"${args[0]}" is not a ${what}`); return n; };
 const owner = (s) => STATUS[s] ?? "-";
 
 // ---- views ----
@@ -185,6 +163,12 @@ async function main() {
   if (!cmd) return home(st);
   if (!C[cmd]) { const e = new UserError(`unknown command "${cmd}"`, ["bwm --help"]); e.code = 2; throw e; }
   const { f, args } = parse(cmd, argv.slice(1));
+  CUR = cmd;
+  { // Reject positional words a command doesn't take: one subcommand where it has them, then at most one id.
+    const takesSub = ["card", "decision", "proof", "hooks"].includes(cmd) || cmd === "shadow" || cmd === "decide";
+    const max = cmd === "decide" ? 1 : takesSub ? 2 : 0;
+    if (!f.help && args.length > max) throw usage(cmd, `unexpected argument "${args[max]}"`);
+  }
   if (f.help) return cmdHelp(cmd);
   const sub = ["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && args.length) ? args.shift() : null;
   if (["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && sub)) {
@@ -200,11 +184,19 @@ async function main() {
     }
     case "goal": {
       const g = st.needGoal();
+      const states = (f["done-state"] ?? []).map((ds) => {
+        const m = ds.match(/^(\d+)=(open|working|done)$/);
+        if (!m) throw usage("goal", `--done-state takes <id>=<open|working|done>, got "${ds}"`);
+        if (!st.doneWhen().some((d) => d.id === Number(m[1]))) throw new UserError(`no done-when line ${m[1]}`, ["bwm goal"]);
+        return [Number(m[1]), m[2]];
+      });
       const fields = { title: f.title, goal: f.goal, why: f.why, ask: f.ask, today: f.today, after: f.after, picture: f.picture ? readArg(f.picture) : undefined };
       const changed = st.setGoal(fields);
       for (const t of f["add-done"] ?? []) { st.addDone(t); changed.push("done-when"); }
-      for (const ds of f["done-state"] ?? []) { const [i, state] = ds.split("="); if (!state) throw usage("goal", `--done-state takes <id>=<open|working|done>, got "${ds}"`); st.markDone(Number(i), state); changed.push("done-when"); }
-      if (changed.length) { say(`updated: ${[...new Set(changed)].join(", ")}`); return; }
+      for (const [i, state] of states) if (st.markDone(i, state)) changed.push("done-when");
+      const asked = Object.values(fields).some((v) => v !== undefined) || states.length || (f["add-done"] ?? []).length;
+      if (changed.length) { say(`updated: ${[...new Set(changed)].join(", ")}`); return help("bwm goal", "bwm render"); }
+      if (asked) { say("goal: (no-op)"); return; }
       const G = st.goal();
       kv({ title: G.title, goal: G.goal, why: G.why, ask: G.ask, today: JSON.parse(G.today || "[]").join(" | "), after: JSON.parse(G.after || "[]").join(" | "), picture: G.picture ? `${G.picture.length} chars of SVG` : "(none)" });
       rows("done-when", ["id", "state", "text"], st.doneWhen());
@@ -213,9 +205,10 @@ async function main() {
     case "card": {
       if (sub === "add") {
         if (!f.phase || !f.title) throw usage("card", `card add needs --phase and --title`);
-        const id = st.addCard({ phase: f.phase, title: f.title, status: f.status ?? "working", note: f.note ?? null, body: withDiagram(f.text ?? readArg(f["text-file"]) ?? null, f.diagram) });
+        const body = withDiagram(f.text ?? readArg(f["text-file"]) ?? null, f.diagram);
+        const id = st.addCard({ phase: f.phase, title: f.title, status: f.status ?? "working", note: f.note ?? null, body });
         say(`added: card ${id} (${f.phase}, ${f.status ?? "working"})`);
-        if (f.phase === "understand" && !f.diagram && !hasDiagram(f.text ?? "")) { say("warning: no diagram. An Understand card opens with a drawing of what it explains."); return help(`bwm card set ${id} --diagram <drawing.svg>`); }
+        if (f.phase === "understand" && !hasDiagram(body)) { say("warning: no diagram. An Understand card opens with a drawing of what it explains."); return help(`bwm card set ${id} --diagram <drawing.svg>`); }
         return help(`bwm card set ${id} --status done`, `bwm card show ${id}`);
       }
       const id = id1(args, "card id"); const c = st.card(id);
@@ -223,7 +216,7 @@ async function main() {
       if (f.diagram && c.kind !== "note") throw new UserError(`card ${id} is a ${c.kind}; --diagram goes on note cards`);
       const text = f.text ?? readArg(f["text-file"]);
       const changed = st.setCard(id, { status: f.status, note: f.note, title: f.title, phase: f.phase, body: f.diagram ? withDiagram(text ?? c.body, f.diagram) : text });
-      say(changed ? `updated: card ${id} → ${f.status ?? c.status}` : `card ${id}: (no-op)`); return;
+      say(changed ? `updated: card ${id} → ${f.status ?? c.status}` : `card ${id}: (no-op)`); return help(`bwm card show ${id}`, "bwm");
     }
     case "cards": {
       const all = st.cards({ phase: f.phase, status: f.status, kind: f.kind });
@@ -231,7 +224,7 @@ async function main() {
       if (!all.length) { say(`cards: none${f.phase ? ` in ${f.phase}` : ""}`); return help('bwm card add --phase <phase> --title "<title>"'); }
       rows("cards", ["id", "phase", "status", "owner", "title"], list.map(cardRow), all.length);
       if (list.length < all.length) say(`done: ${all.length - list.length} hidden (use --all)`);
-      return;
+      return help(list[0] ? `bwm card show ${list[0].id}` : null, list.length < all.length ? `bwm cards${f.phase ? ` --phase ${f.phase}` : ""} --all` : null);
     }
     case "ask": {
       if (!(f.option ?? []).length) say("note: no --option given; the human answers in their own words");
@@ -250,11 +243,11 @@ async function main() {
         if (!f.topic || !f.text) throw usage("decision", "decision add needs --topic and --text");
         const id = st.addDecision({ topic: f.topic, text: f.text, status: f.status ?? "settled", asked: f.asked ?? null, answer: f.answer ?? null, why: f.why ?? null });
         if (pin) st.setDecision(id, { pin_x: pin[0], pin_y: pin[1] });
-        say(`added: decision ${id} (${f.status ?? "settled"})`); return;
+        say(`added: decision ${id} (${f.status ?? "settled"})`); return help(pin ? null : `bwm decision set ${id} --pin <x>,<y>`, "bwm design");
       }
       const id = id1(args, "decision id");
-      st.setDecision(id, { topic: f.topic, text: f.text, status: f.status, asked: f.asked, answer: f.answer, why: f.why, ...(pin ? { pin_x: pin[0], pin_y: pin[1] } : {}) });
-      say(`updated: decision ${id}`); return;
+      const changedD = st.setDecision(id, { topic: f.topic, text: f.text, status: f.status, asked: f.asked, answer: f.answer, why: f.why, ...(pin ? { pin_x: pin[0], pin_y: pin[1] } : {}) });
+      say(changedD ? `updated: decision ${id}` : `decision ${id}: (no-op)`); return help("bwm design");
     }
     case "design": {
       const g = st.needGoal();
@@ -283,7 +276,7 @@ async function main() {
         const steps = st.steps(id);
         return help(!steps.some((s) => s.role === "control") ? `bwm proof control ${id} --did "<a run that should fail>" --expected "<fails>" --got "<what did>"` : null, `bwm proof pass ${id}`, `bwm proof pass ${id} --check`);
       }
-      if (sub === "try") { if (!f.text) throw usage("proof", "proof try needs --text"); st.setProof(id, { try: f.text }); say(`updated: proof ${id} try-it-yourself`); return; }
+      if (sub === "try") { if (!f.text) throw usage("proof", "proof try needs --text"); st.setProof(id, { try: f.text }); say(`updated: proof ${id} try-it-yourself`); return help(`bwm proof pass ${id}`, `bwm proof show ${id}`); }
       if (sub === "pass") {
         const steps = st.steps(id);
         if (!steps.some((s) => s.role === "step")) throw new UserError(`proof ${id} has no steps yet`, [`bwm proof step ${id} --did "<what you ran>" --expected "<should>" --got "<did>" --evidence <file>`]);
@@ -305,9 +298,10 @@ async function main() {
     }
     case "import": {
       if (!f.reply && !f["reply-file"]) throw usage("import", "pass --reply-file <path> (or --reply <text>)");
-      const p = parseReply(f["reply-file"] ? readArg(f["reply-file"]) : f.reply);
-      if (!p) throw new UserError("couldn't read the reply: pass everything from the answers[N] line on");
-      st.submit(p);
+      const p = globalThis.BWMReply.parse(f["reply-file"] ? readArg(f["reply-file"]) : f.reply);
+      if (!p) throw new UserError("no answers block in the reply: it starts at the line answers[N]{card,question,pick,flags,verdict,note}:", ["bwm import --reply-file <file holding the whole paste>"]);
+      if (p.read !== p.expected) throw new UserError(`the reply says ${p.expected} answer(s) but ${p.read} row(s) read; nothing imported. Ask the human to copy the reply again, or check the file holds every row`, ["bwm import --reply-file <file>"]);
+      st.submit({ answers: p.answers, seen: p.seen });
     } // falls through: apply it now
     case "answers": case "wait": {
       st.needGoal();
@@ -352,7 +346,7 @@ async function main() {
       if (sub === "uninstall") {
         const n = I.uninstall(file, hookPath, st.setting("hooks.addedEnv") === "1");
         st.setting("hooks.mode", "off");
-        say(n ? `removed: ${n} hooks from ${file}` : `removed: nothing (no build-with-me hooks in ${file})`); return;
+        say(n ? `removed: ${n} hooks from ${file}` : `hooks: (no-op) none in ${file}`); return help("bwm hooks status");
       }
       const list = I.status(file, hookPath);
       kv({ settings: file, mode: list.length ? st.setting("hooks.mode") ?? "shadow" : "not installed" });
@@ -365,7 +359,7 @@ async function main() {
         kv({ id: r.id, when: new Date(r.ts).toISOString(), event: r.event, label: r.label ?? "(not yet)", should: r.should, note: r.note, "you-did": r.agent_did, error: r.meta?.error, ms: r.meta?.ms });
         rows("would-ask", ["type", "target", "confidence", "reason"], r.actions);
         if (r.moment) { kv({ human: cut(r.moment.user, 600), claude: cut(r.moment.assistant, 600) }); rows("tools", ["name", "input", "result"], r.moment.tools ?? []); }
-        return help(`bwm shadow label ${r.id} --label right|wrong|missed --should "<types that were due>"`);
+        return help(`bwm shadow label ${r.id} --label right`, `bwm shadow label ${r.id} --label wrong --note "<why>"`, `bwm shadow label ${r.id} --label missed --should "<types that were due>"`);
       }
       if (sub === "label") {
         const id = id1(args, "shadow moment id");
@@ -386,7 +380,8 @@ async function main() {
       const r = await check(st, { tool: TOOL, dir: DIR, url: f.url });
       rows("shots", ["view", "path"], r.shots);
       if (r.faults.length) rows("faults", ["view", "fault"], r.faults); else say(`faults: none at ${r.shots.length} views`);
-      return help("Read each screenshot, fix what looks wrong, and run bwm check again.");
+      say("next: read each screenshot, fix what looks wrong, then run check again");
+      return help(f.url ? `bwm check --url ${f.url}` : "bwm check");
     }
   }
 }
