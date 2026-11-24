@@ -42,6 +42,9 @@ command. State lives in `.build-with-me/` in the working directory, so add that 
      to paste into chat. Pass the line that starts with `bwm-answers` to
      `bwm import --reply '<line>'`, and re-render after each round.
 
+   Then run `bwm hooks install` once per project. From the next session on, your native task list
+   shows on the board, and the classifier starts its shadow log (see [Hooks](#hooks)).
+
    Done when the human has a link and the page shows the goal, why, and done-when.
 
 2. **Catch them up.** Find the facts yourself: read the code, run commands, check docs. For each
@@ -107,3 +110,21 @@ The page is the truth of the work. Before each message to the human:
 
 Write everything on the page in the human's words: plain titles and sentences, with no ids, codes
 or file-path jargon where a word will do.
+
+## Hooks
+
+`bwm hooks install` adds hooks to the project's `.claude/settings.local.json`:
+
+- **Task sync.** Each item on your native task list (TaskCreate and TaskUpdate, or TodoWrite)
+  becomes one of your cards in Prove, and follows its status: pending is `expected`, in progress is
+  `working`, completed is `done`. Track your own work there as usual, and move a card to another
+  phase with `bwm card set <id> --phase …` when it belongs elsewhere.
+- **Classifier.** After each human message, each batch of tool calls and each reply, a small model
+  names the page updates now due. In **shadow mode** (the default) it only writes them to the
+  shadow log, and you keep the page yourself as the steps above say. Review that log with the human
+  in `bwm shadow`, and label each moment `right`, `wrong` or `missed` (with `--should` naming what
+  was due). Switch with `bwm hooks install --mode live` once they agree the labels are good enough.
+- **Live mode.** A hook message starting `build-with-me page:` names each update that is due and
+  the `bwm` command for it. Make those page calls after the step you are in, and leave the page
+  alone between messages.
+

@@ -61,6 +61,12 @@ const C = {
   wait: { flags: { timeout: "n" }, args: "", about: "Wait for the human to submit from the page, then apply and print their answers. Run it in the background. Default timeout 1800 s.", ex: ["bwm wait", "bwm wait --timeout 600"] },
   serve: { flags: { port: "n" }, args: "", about: "Serve the live page on localhost, with Submit wired to this store. Run it in the background; it prints its URL.", ex: ["bwm serve", "bwm serve --port 4848"] },
   render: { flags: { out: "s" }, args: "", about: "Write the page as one self-contained HTML file (state and evidence inlined), to publish or open. Submit there copies a reply to paste into chat.", ex: ["bwm render", "bwm render --out page.html"] },
+  hooks: { flags: { mode: "s", settings: "s" }, args: "install | uninstall | status",
+    about: "Install the page hooks into this project's Claude Code settings (.claude/settings.local.json, or --settings <file>). They mirror your native task list onto the board, and run a classifier that names the page updates due. --mode shadow (the default) only records those in bwm shadow; --mode live hands them to you as hook messages.",
+    ex: ["bwm hooks install", "bwm hooks install --mode live", "bwm hooks status", "bwm hooks uninstall"] },
+  shadow: { flags: { all: "b", label: "s", should: "s", note: "s", limit: "n" }, args: "[show <id> | label <id>]",
+    about: "The shadow log: each moment the classifier judged, what it would have asked for, and what you did on your own. Label each with right, wrong or missed (--should names the updates that were due) before hooks go live.",
+    ex: ["bwm shadow", "bwm shadow show 12", 'bwm shadow label 12 --label missed --should "proof.attach" --note "the curl run proved card 9"', "bwm shadow --all"] },
   check: { flags: { url: "s" }, args: "", about: "Screenshot the page at desktop and phone width, light and dark, and report overflow and script errors. Needs Playwright. Read the screenshots and fix what looks wrong before showing the human.", ex: ["bwm check"] },
 };
 
@@ -135,9 +141,9 @@ async function main() {
   if (!C[cmd]) { const e = new UserError(`unknown command "${cmd}"`, ["bwm --help"]); e.code = 2; throw e; }
   const { f, args } = parse(cmd, argv.slice(1));
   if (f.help) return cmdHelp(cmd);
-  const sub = ["card", "decision", "proof"].includes(cmd) ? args.shift() : null;
-  if (["card", "decision", "proof"].includes(cmd)) {
-    const subs = C[cmd].args.split(" | ").map((x) => x.split(" ")[0]);
+  const sub = ["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && args.length) ? args.shift() : null;
+  if (["card", "decision", "proof", "hooks"].includes(cmd) || (cmd === "shadow" && sub)) {
+    const subs = C[cmd].args.replace(/[[\]]/g, "").split(" | ").map((x) => x.split(" ")[0]);
     if (!subs.includes(sub)) throw usage(cmd, sub ? `unknown subcommand "${sub}"` : `name a subcommand: ${subs.join(", ")}`);
   }
 
@@ -279,6 +285,50 @@ async function main() {
       const r = render(st, path.join(TOOL, "page"), file);
       say(`rendered: ${file}`, `size: ${r.bytes} bytes${r.skipped.length ? `; ${r.skipped.length} evidence file(s) over the inline limit linked by path` : ""}`);
       return help(`bwm check`);
+    }
+    case "hooks": {
+      const I = await import("./lib/install.mjs");
+      const hookPath = path.join(TOOL, "hooks", "hook.mjs");
+      const file = path.resolve(f.settings ?? path.join(process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), ".claude", "settings.local.json"));
+      if (sub === "install") {
+        const mode = f.mode ?? "shadow";
+        if (!["shadow", "live"].includes(mode)) throw usage("hooks", `--mode takes shadow or live, got "${mode}"`);
+        const r = I.install(file, hookPath, mode);
+        st.setting("hooks.mode", mode); if (r.addedEnv) st.setting("hooks.addedEnv", "1");
+        say(`installed: ${r.events.length} hooks in ${file}`, `mode: ${mode}${mode === "shadow" ? " (the classifier records what it would ask for; nothing is injected)" : " (page updates arrive as hook messages)"}`,
+          "task-sync: on (TaskCreate, TaskUpdate, TodoWrite land on the board as your cards)", "takes-effect: next session, or after /hooks reload");
+        return help(mode === "shadow" ? "bwm shadow" : null, "bwm hooks status");
+      }
+      if (sub === "uninstall") {
+        const n = I.uninstall(file, hookPath, st.setting("hooks.addedEnv") === "1");
+        st.setting("hooks.mode", "off");
+        say(n ? `removed: ${n} hooks from ${file}` : `removed: nothing (no build-with-me hooks in ${file})`); return;
+      }
+      const list = I.status(file, hookPath);
+      kv({ settings: file, mode: list.length ? st.setting("hooks.mode") ?? "shadow" : "not installed" });
+      rows("hooks", ["event", "matcher", "async"], list);
+      return help(list.length ? null : "bwm hooks install");
+    }
+    case "shadow": {
+      if (sub === "show") {
+        const r = st.shadowRow(id1(args, "shadow moment id"));
+        kv({ id: r.id, when: new Date(r.ts).toISOString(), event: r.event, label: r.label ?? "(not yet)", should: r.should, note: r.note, "you-did": r.agent_did, error: r.meta?.error, ms: r.meta?.ms });
+        rows("would-ask", ["type", "target", "confidence", "reason"], r.actions);
+        if (r.moment) { kv({ human: cut(r.moment.user, 600), claude: cut(r.moment.assistant, 600) }); rows("tools", ["name", "input", "result"], r.moment.tools ?? []); }
+        return help(`bwm shadow label ${r.id} --label right|wrong|missed --should "<types that were due>"`);
+      }
+      if (sub === "label") {
+        const id = id1(args, "shadow moment id");
+        if (!f.label) throw usage("shadow", "missing --label");
+        st.labelShadow(id, { label: f.label, should: f.should, note: f.note });
+        say(`labelled: moment ${id} ${f.label}`); return help("bwm shadow");
+      }
+      const all = st.shadow({ limit: 100000 }), list = st.shadow({ unlabelled: !f.all, limit: f.limit ?? 30 });
+      const L = (k) => all.filter((r) => r.label === k).length;
+      kv({ moments: all.length, asked: all.filter((r) => r.actions.length).length, "you-acted-alone": all.filter((r) => r.agent_did && !r.actions.length).length,
+        labelled: `${L("right")} right, ${L("wrong")} wrong, ${L("missed")} missed`, errors: all.filter((r) => r.meta?.error).length || undefined });
+      rows(f.all ? "moments" : "unlabelled", f.all ? ["id", "event", "label", "would", "you_did"] : ["id", "event", "would", "you_did"], list.map((r) => ({ ...r, would: r.actions.map((a) => a.type).join(" ") || "-", you_did: r.agent_did ?? "" })), f.all ? all.length : all.filter((r) => !r.label).length);
+      return help(list[0] ? `bwm shadow show ${list[0].id}` : null);
     }
     case "check": {
       st.needGoal();

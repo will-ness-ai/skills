@@ -58,6 +58,21 @@ CREATE TABLE IF NOT EXISTS submissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT, goal_id INTEGER NOT NULL,
   ts INTEGER NOT NULL, payload TEXT NOT NULL, read_at INTEGER
 );
+CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT);
+-- Native task-list items (TaskCreate/TodoWrite) mirrored onto board cards by the hooks.
+CREATE TABLE IF NOT EXISTS task_links (
+  session TEXT NOT NULL, task TEXT NOT NULL, card_id INTEGER NOT NULL, PRIMARY KEY (session, task)
+);
+-- Shadow mode: each moment the classifier judged, what it would have asked for, and the label.
+CREATE TABLE IF NOT EXISTS shadow (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, session TEXT, event TEXT NOT NULL,
+  moment TEXT,                    -- JSON: the window the classifier read
+  actions TEXT,                   -- JSON: what it would have asked for
+  agent_did TEXT,                 -- the page commands the agent ran on its own in this batch
+  meta TEXT,                      -- JSON: latency, cost, error
+  label TEXT,                     -- right | wrong | missed, set by a person
+  should TEXT, note TEXT
+);
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT, goal_id INTEGER NOT NULL, ts INTEGER NOT NULL, text TEXT NOT NULL
 );
@@ -134,6 +149,7 @@ export function open(dir) {
         .run(next.status, next.note, next.title, next.phase, next.body, t, doneAt, next.status === "done" && c.status !== "done" ? 1 : 0, id);
       s.touch(); return true;
     },
+    removeCard(id) { s.card(id); q("DELETE FROM cards WHERE id = ?").run(id); q("DELETE FROM steps WHERE card_id = ?").run(id); s.touch(); },
     seen(ids) { const t = now(); for (const id of ids) q("UPDATE cards SET seen_at = ? WHERE id = ? AND seen_at IS NULL").run(t, id); },
 
     ask({ title, topic, know = [], options = [], rec = null, why = null, flips = null, shape = null, phase = "decide" }) {
@@ -215,6 +231,29 @@ export function open(dir) {
       s.markRead(sub.id);
       s.log(`You answered ${out.length} item${out.length === 1 ? "" : "s"}`);
       return out;
+    },
+    setting(k, v) {
+      if (v === undefined) return q("SELECT v FROM settings WHERE k = ?").get(k)?.v ?? null;
+      q("INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").run(k, v);
+    },
+    taskCard(session, task, card) {
+      if (card === undefined) return q("SELECT card_id FROM task_links WHERE session = ? AND task = ?").get(session, String(task))?.card_id ?? null;
+      if (card === null) q("DELETE FROM task_links WHERE session = ? AND task = ?").run(session, String(task));
+      else q("INSERT OR REPLACE INTO task_links (session, task, card_id) VALUES (?, ?, ?)").run(session, String(task), card);
+    },
+    taskLinks(session) { return q("SELECT * FROM task_links WHERE session = ?").all(session); },
+    addShadow(r) {
+      return Number(q("INSERT INTO shadow (ts, session, event, moment, actions, agent_did, meta) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .run(now(), r.session ?? null, r.event, JSON.stringify(r.moment ?? null), JSON.stringify(r.actions ?? []), r.agent_did ?? null, JSON.stringify(r.meta ?? {})).lastInsertRowid);
+    },
+    shadow({ unlabelled = false, limit = 50 } = {}) {
+      return q(`SELECT * FROM shadow ${unlabelled ? "WHERE label IS NULL" : ""} ORDER BY id DESC LIMIT ?`).all(limit)
+        .map((r) => ({ ...r, moment: J(r.moment, null), actions: J(r.actions, []), meta: J(r.meta, {}) }));
+    },
+    shadowRow(id) { const r = q("SELECT * FROM shadow WHERE id = ?").get(id); if (!r) throw new UserError(`no shadow moment ${id}`, ["bwm shadow"]); return { ...r, moment: J(r.moment, null), actions: J(r.actions, []), meta: J(r.meta, {}) }; },
+    labelShadow(id, { label, should = null, note = null }) {
+      if (!["right", "wrong", "missed"].includes(label)) throw new UserError(`unknown label "${label}": use right, wrong or missed`);
+      s.shadowRow(id); q("UPDATE shadow SET label = ?, should = ?, note = ? WHERE id = ?").run(label, should, note, id);
     },
     events(limit = 20) { const g = s.goal(); return g ? q("SELECT * FROM events WHERE goal_id = ? ORDER BY id DESC LIMIT ?").all(g.id, limit) : []; },
 
