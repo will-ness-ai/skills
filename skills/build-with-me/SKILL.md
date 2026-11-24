@@ -39,8 +39,8 @@ command. State lives in `.build-with-me/` in the working directory, so add that 
    - Where the human can open localhost (Claude Code on their machine), run `bwm serve` in the
      background and give them the URL. Their Submit button reaches you through `bwm wait`.
    - Elsewhere, run `bwm render` and publish the file as an artifact. Their Submit copies a reply
-     to paste into chat. Pass the line that starts with `bwm-answers` to
-     `bwm import --reply '<line>'`, and re-render after each round.
+     to paste into chat: an `answers[N]{…}:` header and one row per answer. Pass everything from
+     that header on to `bwm import --reply '<rows>'`, and re-render after each round.
 
    Then run `bwm hooks install` once per project. From the next session on, your native task list
    shows on the board, and the classifier starts its shadow log (see [Hooks](#hooks)).

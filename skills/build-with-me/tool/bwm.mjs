@@ -17,7 +17,8 @@ const BWM = process.env.BWM_CMD ?? `node ${q(REL.startsWith("..") ? path.join(TO
 // ---- output: TOON-shaped rows, key: value details, help[] blocks ----
 const out = [];
 const say = (...l) => out.push(...l);
-const cell = (v) => { v = v === null || v === undefined ? "" : String(v).replace(/\s+/g, " "); return /[,:"]/.test(v) ? `"${v.replace(/"/g, '\\"')}"` : v; };
+// Line breaks survive as \n inside a quoted value, so a human's bullet list reaches the agent intact.
+const cell = (v) => { v = v === null || v === undefined ? "" : String(v).replace(/\r?\n/g, "\n").replace(/[ \t]+/g, " ").trim(); return /[,:"\\\n]/.test(v) ? `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"` : v; };
 const rows = (name, fields, list, total) => {
   if (!list.length) return say(`${name}: none`);
   say(`${name}[${list.length}${total !== undefined && total !== list.length ? ` of ${total}` : ""}]{${fields.join(",")}}:`);
@@ -58,7 +59,7 @@ const C = {
     about: "Record proof. Kinds: golden, edge, error, hardening. Each step says what you did, what should happen and what did, with evidence (a screenshot or video path, or captured terminal output). A control is a run that should fail (or succeed) to show the test can tell the difference. pass --check hands it to the human to verify.",
     ex: ['bwm proof add --kind hardening --title "The internet can\'t reach it" --claim "Nothing outside your tailnet reaches the site"', 'bwm proof step 9 --did "curl the site from a cloud VM" --expected "Name does not resolve" --got "Could not resolve host" --term-file /tmp/curl.txt', 'bwm proof control 9 --did "Same curl from your phone" --expected "Works" --got "HTTP/2 200" --term "HTTP/2 200"', "bwm proof pass 9", "bwm proof pass 8 --check"] },
   proofs: { flags: {}, args: "", about: "The coverage map: every proof by kind, so gaps show.", ex: ["bwm proofs"] },
-  import: { flags: { "reply!": "s" }, args: "", about: "Record answers the human pasted into chat from a rendered page (the line starting bwm-answers), then apply them like wait does.", ex: ["bwm import --reply 'bwm-answers {\"answers\":{\"4\":{\"pick\":\"1\"}}}'"] },
+  import: { flags: { "reply!": "s" }, args: "", about: "Record answers the human pasted into chat from a rendered page (the answers[N] rows), then apply them like wait does.", ex: ["bwm import --reply $'answers[1]{card,question,pick,flags,verdict,note}:\\n  4,Ship it?,1,,,'"] },
   answers: { flags: {}, args: "", about: "Apply the human's unread submissions to the board and print them. wait does this when one arrives.", ex: ["bwm answers"] },
   wait: { flags: { timeout: "n" }, args: "", about: "Wait for the human to submit from the page, then apply and print their answers. Run it in the background. Default timeout 1800 s.", ex: ["bwm wait", "bwm wait --timeout 600"] },
   serve: { flags: { port: "n" }, args: "", about: "Serve the live page on localhost, with Submit wired to this store. Run it in the background; it prints its URL.", ex: ["bwm serve", "bwm serve --port 4848"] },
@@ -96,6 +97,32 @@ function cmdHelp(cmd) {
   const s = C[cmd];
   say(`usage: bwm ${cmd}${s.args ? " " + s.args : ""} ${Object.entries(s.flags).map(([k, t]) => { const n = k.replace("!", ""); const v = t === "b" ? "" : t === "l" ? ` <${n}>…` : ` <${n}>`; return k.endsWith("!") ? `--${n}${v}` : `[--${n}${v}]`; }).join(" ")}`.trimEnd());
   say(s.about, "examples:"); for (const e of s.ex) say(`  ${e.replace(/^bwm/, BWM)}`);
+}
+// The reply a rendered page copies: TOON rows (answers[N]{card,question,pick,flags,verdict,note}:)
+// plus an optional "seen: 1 2" line. The older one-line JSON form (bwm-answers {...}) still reads.
+function parseReply(text) {
+  const j = text.match(/bwm-answers\s+(\{[\s\S]*\})/);
+  if (j) { try { const p = JSON.parse(j[1]); return { answers: p.answers ?? {}, seen: p.seen ?? [] }; } catch { return null; } }
+  const lines = text.split(/\r?\n/), h = lines.findIndex((l) => /^answers\[\d+\]\{[^}]*\}:\s*$/.test(l.trim()));
+  if (h < 0) return null;
+  const fields = lines[h].trim().match(/\{([^}]*)\}/)[1].split(","), answers = {};
+  for (const l of lines.slice(h + 1)) {
+    if (!/^\s+\S/.test(l)) break;
+    const cells = []; let cur = "", q = false, i = 0, s = l.trim();
+    for (; i < s.length; i++) {
+      const ch = s[i];
+      if (q) { if (ch === "\\" && i + 1 < s.length) { const n = s[++i]; cur += n === "n" ? "\n" : n; } else if (ch === '"') q = false; else cur += ch; }
+      else if (ch === '"') q = true; else if (ch === ",") { cells.push(cur); cur = ""; } else cur += ch;
+    }
+    cells.push(cur);
+    const r = Object.fromEntries(fields.map((k, n) => [k, cells[n] ?? ""])), a = {};
+    if (r.pick) a.pick = r.pick;
+    for (const fl of (r.flags || "").split(/\s+/).filter(Boolean)) a[fl] = true;
+    if (r.verdict) { a.verdict = r.verdict; if (r.note) a.comment = r.note; } else if (r.note) a.take = r.note;
+    answers[r.card] = a;
+  }
+  const seen = (text.match(/^seen:\s*(.*)$/m)?.[1] ?? "").split(/[\s,]+/).filter(Boolean).map(Number).filter(Number.isInteger);
+  return { answers, seen };
 }
 const readArg = (p) => { if (!p) return undefined; if (!fs.existsSync(p)) throw new UserError(`no file at ${p}`); return fs.readFileSync(p, "utf8"); };
 const id1 = (args, what = "id") => { const n = Number(args[0]); if (!Number.isInteger(n)) throw new UserError(`name a ${what}`); return n; };
@@ -257,9 +284,9 @@ async function main() {
       return;
     }
     case "import": {
-      const m = f.reply.match(/bwm-answers\s+(\{[\s\S]*\})/); let p;
-      try { p = JSON.parse(m ? m[1] : f.reply); } catch { throw new UserError("couldn't read the reply: pass the whole line that starts with bwm-answers"); }
-      st.submit({ answers: p.answers ?? {}, seen: p.seen ?? [] });
+      const p = parseReply(f.reply);
+      if (!p) throw new UserError("couldn't read the reply: pass everything from the answers[N] line on");
+      st.submit(p);
     } // falls through: apply it now
     case "answers": case "wait": {
       st.needGoal();

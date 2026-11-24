@@ -169,6 +169,13 @@ function payload() {
   for (const c of needs()) if (answered(c)) answers[c.id] = drafts[c.id];
   return { answers, seen: LIVE ? [] : [...localSeen] };
 }
+// The pasted reply is TOON rows, like bwm's own output: each answer once, readable by the human and
+// parsed by bwm import. Values holding a comma, colon, quote or line break are quoted, with \" and \n.
+const tcell = (v) => { v = v == null ? "" : String(v); return /[,:"\\\n]/.test(v) ? `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n")}"` : v; };
+function toonReply(p) {
+  const rows = Object.entries(p.answers).map(([id, a]) => [id, card(Number(id))?.title, a.pick, ["unsure", "prototype", "bakeoff"].filter((f) => a[f]).join(" "), a.verdict, a.take ?? a.comment].map(tcell).join(","));
+  return [`My build-with-me answers (Claude: pass all of this to bwm import --reply):`, `answers[${rows.length}]{card,question,pick,flags,verdict,note}:`, ...rows.map((r) => `  ${r}`), ...(p.seen.length ? [`seen: ${p.seen.join(" ")}`] : [])].join("\n");
+}
 async function submit() {
   const p = payload(); if (!Object.keys(p.answers).length) return;
   if (LIVE) {
@@ -178,8 +185,7 @@ async function submit() {
     else if (t) { t.style.color = "var(--bad)"; t.textContent = "Couldn't reach Claude's page server. Is bwm serve still running?"; }
     render(); return;
   }
-  const lines = needs().filter(answered).map((c) => `- ${c.title}: ${c.kind === "proof" ? (drafts[c.id].verdict === "ok" ? "looks right" : `something's off. ${drafts[c.id].comment || ""}`) : [drafts[c.id].pick ? `option ${drafts[c.id].pick}` : "", ["unsure", "prototype", "bakeoff"].filter((f) => drafts[c.id][f]).join(", "), drafts[c.id].take || ""].filter(Boolean).join(". ")}`);
-  document.getElementById("reply").value = `My answers from the build-with-me page:\n${lines.join("\n")}\n\nbwm-answers ${JSON.stringify(p)}`;
+  document.getElementById("reply").value = toonReply(p);
   modal.hidden = false;
 }
 
