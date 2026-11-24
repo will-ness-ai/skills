@@ -13,9 +13,18 @@ let view = "board", qAt = 0, proofSel = null, openDone = {}, drafts = {}, sent =
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+// A ```svg block in a card draws as a diagram. Scripts, foreign content and event handlers are dropped.
+const diagram = (src) => {
+  const doc = new DOMParser().parseFromString(src, "image/svg+xml"), svg = doc.documentElement;
+  if (svg.nodeName !== "svg" || doc.querySelector("parsererror")) return `<pre>${esc(src)}</pre>`;
+  svg.querySelectorAll("script,foreignObject,iframe,object,embed").forEach((n) => n.remove());
+  for (const n of [svg, ...svg.querySelectorAll("*")]) for (const a of [...n.attributes]) if (/^on/i.test(a.name) || (/href$/i.test(a.name) && !/^#/.test(a.value))) n.removeAttribute(a.name);
+  svg.removeAttribute("width"); svg.removeAttribute("height"); svg.setAttribute("role", "img");
+  return `<figure class="dia">${svg.outerHTML}</figure>`;
+};
 const md = (s) => { const out = []; let list = null, code = null;
   for (const line of String(s ?? "").split("\n")) {
-    if (line.startsWith("```")) { if (code) { out.push(`<pre>${esc(code.join("\n"))}</pre>`); code = null; } else code = []; continue; }
+    if (line.startsWith("```")) { if (code) { out.push(code.svg ? diagram(code.join("\n")) : `<pre>${esc(code.join("\n"))}</pre>`); code = null; } else { code = []; code.svg = /^```svg\s*$/.test(line); } continue; }
     if (code) { code.push(line); continue; }
     const m = line.match(/^\s*[-*] (.*)/);
     if (m) { (list ??= []).push(`<li>${inline(m[1])}</li>`); continue; }

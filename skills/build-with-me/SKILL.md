@@ -49,11 +49,14 @@ command. State lives in `.build-with-me/` in the working directory, so add that 
    Done when the human has a link and the page shows the goal, why, and done-when.
 
 2. **Catch them up.** Find the facts yourself: read the code, run commands, check docs. For each
-   thing the human must know before a decision makes sense, add an Understand card
-   (`bwm card add --phase understand --status done --text-file brief.md`). Write briefs in
-   **show-me** style: bullets, a code shape, a file tree or a small diagram, with a bullet
-   wherever a paragraph was tempting. Done when every question you're about to ask has the facts it depends
-   on, either on a card or in its `--know` lines.
+   thing the human must know before a decision makes sense, add an Understand card. Each card
+   opens with a **diagram** of the thing it explains: the parts and how they connect, the flow a
+   request takes, before vs after, or where the gap is. Draw it as an SVG in the page's colours and
+   attach it with `--diagram`, then add only the bullets the picture can't say
+   (`bwm card add --phase understand --status done --diagram flow.svg --text-file brief.md`).
+   [references/briefs.md](references/briefs.md) has the diagram kinds and the drawing rules. Done
+   when every question you're about to ask has the facts it depends on, on a card or in its
+   `--know` lines, and `bwm` reports no diagram gaps.
 
 3. **Ask.** One decision per `bwm ask`:
    - a plain question as the title

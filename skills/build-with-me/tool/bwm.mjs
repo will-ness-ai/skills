@@ -38,9 +38,9 @@ const C = {
   goal: { flags: { title: "s", goal: "s", why: "s", ask: "s", today: "l", after: "l", picture: "s", "add-done": "l", "done-state": "l" }, args: "",
     about: "Show or change the goal, the ask, today vs after, the picture (an SVG file), and the done-when lines.",
     ex: ['bwm goal --ask "One decision and one check from you, then I can mark the PR ready."', 'bwm goal --today "The site only answers on the Mac" --after "Your phone reaches it over the private link"', "bwm goal --done-state 2=done"] },
-  card: { flags: { phase: "s", title: "s", status: "s", note: "s", text: "s", "text-file": "s", full: "b" }, args: "add | set <id> | show <id>",
-    about: "Add, change or show a board card. Phases: understand, decide, prove, ship, watch. Statuses: answer and check (the human's turn), working and failed (yours), waiting, expected, done.",
-    ex: ['bwm card add --phase understand --title "How Tailscale serve works" --status done --text-file brief.md', 'bwm card set 7 --status failed --note "fixing 1 file"', "bwm card show 7"] },
+  card: { flags: { phase: "s", title: "s", status: "s", note: "s", text: "s", "text-file": "s", diagram: "s", full: "b" }, args: "add | set <id> | show <id>",
+    about: "Add, change or show a board card. --diagram <file.svg> puts a drawing at the top of the card (it replaces any drawing already there); draw with the page's colours: var(--fg), var(--muted), var(--panel), var(--line2), var(--claude), var(--ok), var(--bad), var(--you). Phases: understand, decide, prove, ship, watch. Statuses: answer and check (the human's turn), working and failed (yours), waiting, expected, done.",
+    ex: ['bwm card add --phase understand --title "How Tailscale serve works" --status done --diagram serve.svg --text-file brief.md', 'bwm card set 7 --status failed --note "fixing 1 file"', "bwm card show 7"] },
   cards: { flags: { phase: "s", status: "s", kind: "s", all: "b" }, args: "",
     about: "List cards. Done cards are left out unless --all or --status done.",
     ex: ["bwm cards", "bwm cards --phase prove --all"] },
@@ -129,6 +129,15 @@ function parseReply(text) {
   const seen = (text.match(/^seen:\s*(.*)$/m)?.[1] ?? "").split(/[\s,]+/).filter(Boolean).map(Number).filter(Number.isInteger);
   return { answers, seen };
 }
+// A card's drawing is a ```svg block at the top of its body; the page draws it in the theme's colours.
+const SVG_BLOCK = /^```svg\n[\s\S]*?\n```\n*/;
+const hasDiagram = (body) => /```svg\n/.test(body ?? "");
+function withDiagram(body, file) {
+  if (!file) return body;
+  const svg = readArg(file).trim();
+  if (!/^(<\?xml[^>]*>\s*)?<svg[\s>]/.test(svg)) throw new UserError(`${file} is not an SVG (it should start with <svg)`);
+  return `\`\`\`svg\n${svg.replace(/^<\?xml[^>]*>\s*/, "")}\n\`\`\`\n\n${String(body ?? "").replace(SVG_BLOCK, "")}`.trimEnd();
+}
 const readArg = (p) => { if (!p) return undefined; if (!fs.existsSync(p)) throw new UserError(`no file at ${p}`); return fs.readFileSync(p, "utf8"); };
 const id1 = (args, what = "id") => { const n = Number(args[0]); if (!Number.isInteger(n)) throw new UserError(`name a ${what}`); return n; };
 const owner = (s) => STATUS[s] ?? "-";
@@ -149,8 +158,10 @@ function home(st) {
   rows("claude", ["id", "phase", "status", "title", "note"], mine);
   const gaps = KINDS.filter((k) => !proofs.some((c) => JSON.parse(c.body || "{}").kind === k));
   if (gaps.length) say(`proof-gaps: no ${gaps.join(", ")} proof yet`);
+  const flat = cards.filter((c) => c.phase === "understand" && c.kind === "note" && !hasDiagram(c.body));
+  if (flat.length) say(`diagram-gaps: understand card${flat.length === 1 ? "" : "s"} ${flat.map((c) => c.id).join(", ")} ha${flat.length === 1 ? "s" : "ve"} no diagram`);
   const toDecide = mine.find((c) => c.kind === "question");
-  help(st.unread().length ? "bwm answers" : null, toDecide ? `bwm decide ${toDecide.id} --text "<the decision, one plain sentence>" --why "<why>"` : null, you.length ? "bwm wait" : null,
+  help(flat.length ? `bwm card set ${flat[0].id} --diagram <drawing.svg>` : null, st.unread().length ? "bwm answers" : null, toDecide ? `bwm decide ${toDecide.id} --text "<the decision, one plain sentence>" --why "<why>"` : null, you.length ? "bwm wait" : null,
     mine.find((c) => c.kind !== "question") ? `bwm card set ${mine.find((c) => c.kind !== "question").id} --status done` : null, "bwm render");
 }
 function cardRow(c) { return { ...c, owner: owner(c.status) }; }
@@ -202,12 +213,16 @@ async function main() {
     case "card": {
       if (sub === "add") {
         if (!f.phase || !f.title) throw usage("card", `card add needs --phase and --title`);
-        const id = st.addCard({ phase: f.phase, title: f.title, status: f.status ?? "working", note: f.note ?? null, body: f.text ?? readArg(f["text-file"]) ?? null });
-        say(`added: card ${id} (${f.phase}, ${f.status ?? "working"})`); return help(`bwm card set ${id} --status done`, `bwm card show ${id}`);
+        const id = st.addCard({ phase: f.phase, title: f.title, status: f.status ?? "working", note: f.note ?? null, body: withDiagram(f.text ?? readArg(f["text-file"]) ?? null, f.diagram) });
+        say(`added: card ${id} (${f.phase}, ${f.status ?? "working"})`);
+        if (f.phase === "understand" && !f.diagram && !hasDiagram(f.text ?? "")) { say("warning: no diagram. An Understand card opens with a drawing of what it explains."); return help(`bwm card set ${id} --diagram <drawing.svg>`); }
+        return help(`bwm card set ${id} --status done`, `bwm card show ${id}`);
       }
       const id = id1(args, "card id"); const c = st.card(id);
       if (sub === "show") return showCard(st, c, f.full);
-      const changed = st.setCard(id, { status: f.status, note: f.note, title: f.title, phase: f.phase, body: f.text ?? readArg(f["text-file"]) });
+      if (f.diagram && c.kind !== "note") throw new UserError(`card ${id} is a ${c.kind}; --diagram goes on note cards`);
+      const text = f.text ?? readArg(f["text-file"]);
+      const changed = st.setCard(id, { status: f.status, note: f.note, title: f.title, phase: f.phase, body: f.diagram ? withDiagram(text ?? c.body, f.diagram) : text });
       say(changed ? `updated: card ${id} → ${f.status ?? c.status}` : `card ${id}: (no-op)`); return;
     }
     case "cards": {
