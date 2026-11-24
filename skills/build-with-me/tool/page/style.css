@@ -137,3 +137,5 @@ textarea{width:100%;min-height:64px;resize:vertical;font:inherit;color:var(--fg)
 .modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(10,12,16,.4);padding:16px}
 .modalb{background:var(--card);border-radius:14px;padding:20px;width:min(560px,100%);display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow2)} .modalb h2{font:600 17px var(--font)} .modalb textarea{min-height:200px;font:12px var(--mono)}
 .mrow{display:flex;gap:8px}
+.md .dia{margin:2px 0 4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.md .dia svg{display:block;width:100%;height:auto;max-height:420px;font-family:inherit}

@@ -139,3 +139,21 @@ test("import takes the reply pasted from a rendered page", () => {
   assert.equal(bwm("import").code, 2, "needs --reply-file or --reply");
   assert.equal(bwm("import", "--reply", "nothing here").code, 1);
 });
+
+test("understand cards carry a diagram, and bwm flags the ones that don't", () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), "bwm-dia-")), e = { ...env, BWM_DIR: path.join(d, "store") };
+  const run = (...a) => { const r = spawnSync(process.execPath, [path.join(TOOL, "bwm.mjs"), ...a], { encoding: "utf8", env: e, cwd: d }); return { out: r.stdout, code: r.status }; };
+  run("start", "--title", "T", "--goal", "G");
+  fs.writeFileSync(path.join(d, "a.svg"), '<?xml version="1.0"?>\n<svg viewBox="0 0 10 10"><rect width="5" height="5" fill="var(--ok)"/></svg>');
+  fs.writeFileSync(path.join(d, "b.svg"), '<svg viewBox="0 0 10 10"><circle r="3"/></svg>');
+  fs.writeFileSync(path.join(d, "x.txt"), "not a drawing");
+  let r = run("card", "add", "--phase", "understand", "--title", "Flat", "--status", "done", "--text", "- a fact");
+  assert.match(r.out, /warning: no diagram/); assert.match(r.out, /bwm card set 1 --diagram <drawing\.svg>/);
+  assert.match(run().out, /diagram-gaps: understand card 1 has no diagram/);
+  run("card", "set", "1", "--diagram", path.join(d, "a.svg"));
+  run("card", "set", "1", "--diagram", path.join(d, "b.svg")); // replaces, never stacks
+  const body = open(e.BWM_DIR).card(1).body;
+  assert.equal((body.match(/```svg/g) ?? []).length, 1); assert.match(body, /<circle r="3"\/>/); assert.match(body, /- a fact$/);
+  assert.doesNotMatch(run().out, /diagram-gaps/);
+  assert.equal(run("card", "set", "1", "--diagram", path.join(d, "x.txt")).code, 1);
+});
