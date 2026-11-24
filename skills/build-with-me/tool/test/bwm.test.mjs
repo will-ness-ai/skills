@@ -120,7 +120,7 @@ test("the live server takes a submit, refuses other hosts, and wait applies it",
 test("import takes the reply pasted from a rendered page", () => {
   const st = open(env.BWM_DIR);
   const id = st.ask({ title: "Paste me?", topic: "Paste", options: ["Yes|y"] });
-  const r = bwm("import", "--reply", `My answers...\n- Paste me?: option 1\n\nbwm-answers {"answers":{"${id}":{"pick":"1"}},"seen":[]}`);
+  const r = bwm("import", "--reply", `My build-with-me answers (Claude: pass this to bwm import --reply):\nbwm-answers {"answers":{"${id}":{"pick":"1"}},"seen":[]}`);
   assert.equal(r.code, 0); assert.match(r.out, /Paste me\?,"picked 1: Yes"/);
   assert.equal(bwm("import", "--reply", "nothing here").code, 1);
 });

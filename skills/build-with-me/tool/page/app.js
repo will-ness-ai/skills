@@ -178,8 +178,9 @@ async function submit() {
     else if (t) { t.style.color = "var(--bad)"; t.textContent = "Couldn't reach Claude's page server. Is bwm serve still running?"; }
     render(); return;
   }
-  const lines = needs().filter(answered).map((c) => `- ${c.title}: ${c.kind === "proof" ? (drafts[c.id].verdict === "ok" ? "looks right" : `something's off. ${drafts[c.id].comment || ""}`) : [drafts[c.id].pick ? `option ${drafts[c.id].pick}` : "", ["unsure", "prototype", "bakeoff"].filter((f) => drafts[c.id][f]).join(", "), drafts[c.id].take || ""].filter(Boolean).join(". ")}`);
-  document.getElementById("reply").value = `My answers from the build-with-me page:\n${lines.join("\n")}\n\nbwm-answers ${JSON.stringify(p)}`;
+  // One copy of each answer: the reply line alone. bwm import prints it back beside each question.
+  if (!p.seen.length) delete p.seen;
+  document.getElementById("reply").value = `My build-with-me answers (Claude: pass this to bwm import --reply):\nbwm-answers ${JSON.stringify(p)}`;
   modal.hidden = false;
 }
 
