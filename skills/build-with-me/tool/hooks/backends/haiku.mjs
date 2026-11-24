@@ -9,37 +9,15 @@ import { TYPES } from '../actions.mjs';
 
 const HERE = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    actions: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: { type: { type: 'string', enum: TYPES }, target: { type: 'string' }, reason: { type: 'string' }, confidence: { type: 'number' } },
-        required: ['type', 'target', 'reason', 'confidence'],
-      },
-    },
-  },
-  required: ['actions'],
-};
-
 export function loadPrompt(name) {
   return fs.readFileSync(path.join(HERE, 'prompts', `${name}.txt`), 'utf8');
 }
 
-// v1 render: everything shown flat. v2+ render: marks which part is NEW at this
-// event, so the classifier stops re-acting on a human message it already saw.
-export function renderInput({ window: w, state, event }, style = 'v2') {
+// Marks which part of the window is NEW at this event, so the classifier doesn't act twice on a message.
+export function renderInput({ window: w, state, event }) {
   const tools = (w.tools || []).map(t => `- ${t.name} ${t.input}${t.error ? ' [nonzero exit/error]' : ''}\n  -> ${t.result || '(no output)'}`).join('\n') || '(none)';
   const touched = `PAGE LAST TOUCHED: ${w.sinceLastPageCall == null ? 'not in recent window' : `${w.sinceLastPageCall} tool calls ago`}`;
   const st = `PAGE STATE:\n${typeof state === 'string' ? state : JSON.stringify(state)}`;
-  if (style === 'v1') return [
-    `EVENT: ${event || 'unknown'}`, st, touched,
-    `LAST HUMAN MESSAGE:\n${w.user || '(none)'}`,
-    `RECENT TOOL CALLS (oldest first):\n${tools}`,
-    `LAST AGENT MESSAGE:\n${w.assistant || '(none)'}`,
-  ].join('\n\n');
   const human = `HUMAN MESSAGE:\n${w.user || '(none)'}`, agent = `AGENT MESSAGE:\n${w.assistant || '(none)'}`, tc = `TOOL CALLS (oldest first):\n${tools}`;
   let ctx, fresh;
   if (event === 'UserPromptSubmit') { ctx = [agent]; fresh = [human]; }
@@ -59,7 +37,7 @@ function extractJson(s) {
 }
 
 export async function run(input, opts = {}) {
-  const { prompt = 'v3', model = 'claude-haiku-5-5', timeoutMs = 15000, schema = false, effort = 'low' } = opts;
+  const { prompt = 'v3', model = 'claude-haiku-5-5', timeoutMs = 15000, effort = 'low' } = opts;
   const args = [
     '-p', '--model', model, '--output-format', 'json',
     '--system-prompt', loadPrompt(prompt),
@@ -70,8 +48,7 @@ export async function run(input, opts = {}) {
     '--no-session-persistence',
   ];
   if (effort) args.push('--effort', effort);
-  if (schema) args.push('--json-schema', JSON.stringify(SCHEMA));
-  const meta = { backend: 'haiku', prompt, model, schema, ms: 0, cost_usd: 0, error: null, raw: null };
+  const meta = { backend: 'haiku', prompt, model, ms: 0, cost_usd: 0, error: null, raw: null };
   const t0 = Date.now();
   const out = await new Promise(resolve => {
     let stdout = '', stderr = '', done = false;
@@ -86,7 +63,7 @@ export async function run(input, opts = {}) {
       if (code !== 0 && !stdout) { meta.error = `exit ${code}: ${stderr.slice(0, 200)}`; return resolve(null); }
       resolve(stdout);
     });
-    child.stdin.end(renderInput(input, prompt === 'v1' ? 'v1' : 'v2')); // via stdin: no argv length limits
+    child.stdin.end(renderInput(input)); // via stdin: no argv length limits
   });
   meta.ms = Date.now() - t0;
   if (!out) return { scores: {}, meta };
@@ -98,8 +75,8 @@ export async function run(input, opts = {}) {
   meta.in_tokens = (env.usage?.input_tokens || 0) + (env.usage?.cache_read_input_tokens || 0) + (env.usage?.cache_creation_input_tokens || 0);
   meta.turns = env.num_turns;
   if (env.is_error) { meta.error = 'cli: ' + String(env.result).slice(0, 200); return { scores: {}, meta }; }
-  const obj = env.structured_output || extractJson(env.result);
-  meta.raw = env.structured_output ? JSON.stringify(obj) : env.result;
+  const obj = extractJson(env.result);
+  meta.raw = env.result;
   if (!obj || !Array.isArray(obj.actions)) { meta.error = 'unparseable'; return { scores: {}, meta }; }
   const scores = {};
   for (const a of obj.actions) {

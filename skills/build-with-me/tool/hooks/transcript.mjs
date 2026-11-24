@@ -32,17 +32,17 @@ function isPageCall(name, input) {
 
 // Reads only the last `maxBytes` of the file so cost stays flat on long sessions.
 export function readTail(path, maxBytes = 200_000) {
-  let buf;
+  let buf, start = 0;
   try {
     const fd = fs.openSync(path, 'r');
     const size = fs.fstatSync(fd).size;
-    const start = Math.max(0, size - maxBytes);
+    start = Math.max(0, size - maxBytes);
     buf = Buffer.alloc(size - start);
     fs.readSync(fd, buf, 0, buf.length, start);
     fs.closeSync(fd);
   } catch { return []; }
   const lines = buf.toString('utf8').split('\n');
-  if (lines.length && buf.length >= maxBytes) lines.shift(); // partial first line
+  if (lines.length && start > 0) lines.shift(); // reading began mid-file: the first line is partial
   const out = [];
   for (const l of lines) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch {} }
   return out;

@@ -53,7 +53,7 @@ command. State lives in `.build-with-me/` in the working directory, so add that 
    opens with a **diagram** of the thing it explains: the parts and how they connect, the flow a
    request takes, before vs after, or where the gap is. Draw it as an SVG in the page's colours and
    attach it with `--diagram`, then add only the bullets the picture can't say
-   (`bwm card add --phase understand --status done --diagram flow.svg --text-file brief.md`).
+   (`bwm card add --phase understand --title "<what it explains>" --status done --diagram flow.svg --text-file brief.md`).
    [references/briefs.md](references/briefs.md) has the diagram kinds and the drawing rules. Done
    when every question you're about to ask has the facts it depends on, on a card or in its
    `--know` lines, and `bwm` reports no diagram gaps.
@@ -103,9 +103,8 @@ The page is the truth of the work. Before each message to the human:
 - **The ask is current.** It names what you need from the human, or where things stand when you
   need nothing.
 - **The design is current.** Settled decisions are plain sentences. When a picture helps, `--picture`
-  takes an SVG of the after state. Draw it with the page's colours (`var(--fg)`, `var(--muted)`,
-  `var(--panel)`, `var(--line2)`, `var(--claude)`, `var(--ok)`, `var(--bad)`) so it reads in dark
-  mode. Pin each decision with `bwm decision set <id> --pin x,y`.
+  takes an SVG of the after state, drawn with the page's colours as
+  [references/briefs.md](references/briefs.md) lists them, so it reads in dark mode. Pin each decision with `bwm decision set <id> --pin x,y`.
 - **The page passed its screenshot loop.** Run `bwm check`, read every screenshot, fix what reads
   badly (copy, crowding, an empty column that needs a planned card), and run it again until it
   looks like a product you'd ship.

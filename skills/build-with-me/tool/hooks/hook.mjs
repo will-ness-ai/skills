@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { byType } from "./actions.mjs";
 
 const quiet = () => process.exit(0);
 const out = (obj) => { process.stdout.write(JSON.stringify(obj)); process.exit(0); };
@@ -26,28 +27,19 @@ export const SESSION_START_LIVE = `This session keeps a build-with-me page for t
 - Your native task list (TaskCreate/TaskUpdate or TodoWrite) is mirrored onto the board for you. Use it as you normally would.
 - When a message arrives, finish the step you are in, then make the page call. If the action no longer fits, skip it and say so in one short line.`;
 
-// What each action asks the agent to run. Live mode puts these in the hook message.
-const HOW = {
-  "board.add_card": `${BWM} card add --phase <phase> --title "<title>" --status <status>`,
-  "board.move_card": `${BWM} card set <id> --status <status> --note "<short note>"`,
-  "design.update": `${BWM} goal --ask "<…>"  or  ${BWM} decision add --topic "<…>" --text "<one plain sentence>"`,
-  "proof.build": `${BWM} proof add --kind golden|edge|error|hardening --title "<the claim>", then capture the run`,
-  "proof.attach": `${BWM} proof step <id> --did "<…>" --expected "<…>" --got "<…>" --evidence <file>`,
-  "ask.queue": `${BWM} ask --topic "<…>" --title "<question>" --option "<label>|<what happens>" --rec 1`,
-};
-
 export function message(actions, event) {
   const lead = event === "Stop"
     ? "build-with-me page: your reply is sent, and these page updates are now due. Run them, then stop without repeating the reply."
     : "build-with-me page: these page updates are due. Run them after the step you are in.";
-  return [lead, ...actions.map((a) => `- ${a.type}${a.target ? ` (${a.target})` : ""}: ${a.reason}\n  ${HOW[a.type]}`)].join("\n");
+  const how = (t) => (byType[t]?.command ?? "").replace(/(^|\s)bwm /g, `$1${BWM} `);
+  return [lead, ...actions.map((a) => `- ${a.type}${a.target ? ` (${a.target})` : ""}: ${a.reason}\n  ${how(a.type)}`)].join("\n");
 }
 
 // A compact page summary for the classifier, so its input stays small.
 export function summarise(st) {
   const s = st.state();
   if (!s) return "GOAL: (not set)\nBOARD: (empty)";
-  const linked = new Set(st.db.prepare("SELECT card_id FROM task_links").all().map((r) => r.card_id));
+  const linked = st.linkedCards();
   const by = (k) => s.decisions.filter((d) => d.status === k).map((d) => d.text).join("; ") || "none";
   return [
     `GOAL: ${s.goal.goal}`,
@@ -67,7 +59,9 @@ export function syncTasks(st, h) {
   const ops = [];
   const upsert = (task, { title, status }) => {
     const id = st.taskCard(sid, task);
+    // A link to a card from an earlier goal (after a new bwm start) is dropped, and the task gets a new card.
     let card = null; try { card = id ? st.card(id) : null; } catch {}
+    if (card && card.goal_id !== st.goal().id) { st.taskCard(sid, task, null); card = null; }
     if (card) { if (st.setCard(card.id, { title, status })) ops.push(`updated card ${card.id}`); return; }
     if (!title) return;
     const nid = st.addCard({ phase: "prove", title, status: status ?? "expected", note: "on Claude's list" });

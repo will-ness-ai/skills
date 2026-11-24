@@ -102,13 +102,15 @@ export function open(dir) {
       return s.goal();
     },
     setGoal(fields) {
-      const g = s.needGoal(), keys = Object.keys(fields).filter((k) => fields[k] !== undefined);
-      for (const k of keys) {
+      // Returns the fields that actually changed, so an unchanged write reports a no-op.
+      const g = s.needGoal(), changed = [];
+      for (const k of Object.keys(fields).filter((k) => fields[k] !== undefined)) {
         const v = ["today", "after"].includes(k) ? JSON.stringify(fields[k]) : fields[k];
-        q(`UPDATE goals SET ${k} = ? WHERE id = ?`).run(v, g.id);
+        if (g[k] === v) continue;
+        q(`UPDATE goals SET ${k} = ? WHERE id = ?`).run(v, g.id); changed.push(k);
       }
-      s.touch();
-      return keys;
+      if (changed.length) s.touch();
+      return changed;
     },
     doneWhen() { const g = s.goal(); return g ? q("SELECT * FROM done_when WHERE goal_id = ? ORDER BY id").all(g.id) : []; },
     addDone(text) { const g = s.needGoal(); return Number(q("INSERT INTO done_when (goal_id, text) VALUES (?, ?)").run(g.id, text).lastInsertRowid); },
@@ -180,9 +182,10 @@ export function open(dir) {
       const d = s.decision(id);
       if (f.status && !DECISION.includes(f.status)) throw new UserError(`unknown decision status "${f.status}": use ${DECISION.join(", ")}`);
       const next = { ...d, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)) };
+      if (Object.keys(next).every((k) => next[k] === d[k])) return false;
       q("UPDATE decisions SET topic = ?, text = ?, status = ?, asked = ?, answer = ?, why = ?, pin_x = ?, pin_y = ?, updated_at = ? WHERE id = ?")
         .run(next.topic, next.text, next.status, next.asked, next.answer, next.why, next.pin_x, next.pin_y, now(), id);
-      s.touch();
+      s.touch(); return true;
     },
 
     addProof({ kind, title, claim = null, setup = [], planned = false, phase = "prove" }) {
@@ -191,6 +194,7 @@ export function open(dir) {
     },
     proof(id) { const c = s.card(id); if (c.kind !== "proof") throw new UserError(`card ${id} is not a proof`, ["bwm proofs"]); return { ...c, body: J(c.body, {}), steps: s.steps(id) }; },
     setProof(id, f) { const p = s.proof(id); s.setCard(id, { body: { ...p.body, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)) } }); },
+    step(id) { return q("SELECT * FROM steps WHERE id = ?").get(id) ?? null; },
     steps(id) { return q("SELECT * FROM steps WHERE card_id = ? ORDER BY role = 'control', id").all(id); },
     addStep(id, { role = "step", did, expected = null, got = null, evidence = null, term = null }) {
       s.proof(id);
@@ -227,8 +231,10 @@ export function open(dir) {
           s.setCard(c.id, { status: ok ? "done" : "failed", note: ok ? "you checked it" : "you flagged it" });
           out.push({ card: c.id, title: c.title, answer: ok ? "looks right" : `something's off${a.comment ? `: "${a.comment}"` : ""}` });
         } else {
-          s.setCard(c.id, c.status === "check" ? { status: "done", note: "you checked it" } : { status: "working", note: "your answer is in" });
-          out.push({ card: c.id, title: c.title, answer: a.take ?? JSON.stringify(a) });
+          // A check note takes a verdict like a proof: off sends it back to Claude with the comment.
+          const off = c.status === "check" && a.verdict === "off";
+          s.setCard(c.id, c.status === "check" ? (off ? { status: "failed", note: "you flagged it" } : { status: "done", note: "you checked it" }) : { status: "working", note: "your answer is in" });
+          out.push({ card: c.id, title: c.title, answer: c.status === "check" ? (off ? `something's off${a.comment ? `: "${a.comment}"` : ""}` : "looks right") : a.take ?? JSON.stringify(a) });
         }
       }
       if (Array.isArray(p.seen)) s.seen(p.seen.filter(Number.isInteger));
@@ -245,6 +251,7 @@ export function open(dir) {
       if (card === null) q("DELETE FROM task_links WHERE session = ? AND task = ?").run(session, String(task));
       else q("INSERT OR REPLACE INTO task_links (session, task, card_id) VALUES (?, ?, ?)").run(session, String(task), card);
     },
+    linkedCards() { const g = s.goal(); return g ? new Set(q("SELECT l.card_id AS id FROM task_links l JOIN cards c ON c.id = l.card_id WHERE c.goal_id = ?").all(g.id).map((r) => r.id)) : new Set(); },
     taskLinks(session) { return q("SELECT * FROM task_links WHERE session = ?").all(session); },
     addShadow(r) {
       return Number(q("INSERT INTO shadow (ts, session, event, moment, actions, agent_did, meta) VALUES (?, ?, ?, ?, ?, ?, ?)")
