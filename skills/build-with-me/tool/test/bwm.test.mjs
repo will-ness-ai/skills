@@ -120,7 +120,14 @@ test("the live server takes a submit, refuses other hosts, and wait applies it",
 test("import takes the reply pasted from a rendered page", () => {
   const st = open(env.BWM_DIR);
   const id = st.ask({ title: "Paste me?", topic: "Paste", options: ["Yes|y"] });
-  const r = bwm("import", "--reply", `My build-with-me answers (Claude: pass this to bwm import --reply):\nbwm-answers {"answers":{"${id}":{"pick":"1"}},"seen":[]}`);
+  const q2 = st.ask({ title: "What first?", topic: "Scope", options: ["A|a", "B|b", "C|c", "Unsure|u"] });
+  const reply = `My build-with-me answers (Claude: pass all of this to bwm import --reply):\nanswers[2]{card,question,pick,flags,verdict,note}:\n  ${id},Paste me?,1,,,\n  ${q2},What first?,4,unsure,,"Research first: a lot changed.\\n- improve testing\\n- say \\"why\\", too"\nseen: 1`;
+  let r = bwm("import", "--reply", reply);
   assert.equal(r.code, 0); assert.match(r.out, /Paste me\?,"picked 1: Yes"/);
+  assert.ok(r.out.includes(String.raw`7,What first?,"picked 4: Unsure; unsure; \"Research first: a lot changed.\n- improve testing\n- say \"why\", too\""`.replace("7,", `${q2},`)), r.out);
+  assert.equal(st.decisions().find((d) => d.card_id === q2).answer, 'picked 4: Unsure; unsure; "Research first: a lot changed.\n- improve testing\n- say "why", too"');
+  const q3 = st.ask({ title: "Old form?", topic: "Paste", options: ["Yes|y"] });
+  r = bwm("import", "--reply", `bwm-answers {"answers":{"${q3}":{"pick":"1"}},"seen":[]}`);
+  assert.match(r.out, /Old form\?,"picked 1: Yes"/, "the older JSON line still imports");
   assert.equal(bwm("import", "--reply", "nothing here").code, 1);
 });
